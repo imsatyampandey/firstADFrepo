@@ -1,0 +1,24 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "SatyamSharedADF"
+		},
+		"AzureBlobStorage1_connectionString": {
+			"value": ""
+		},
+		"onpremServer_connectionString": {
+			"value": ""
+		},
+		"SharedIRfromdemo_properties_typeProperties_linkedInfo_resourceId": {
+			"value": "/subscriptions/dbda8b01-6aab-48c4-b253-2e1297b6cbe1/resourcegroups/satyamtesting/providers/Microsoft.DataFactory/factories/ADFsatyamdemo/integrationruntimes/satyamonprem"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
