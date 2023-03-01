@@ -1,0 +1,9 @@
+{
+	"name": "SatyamSharedADF",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "71947ae7-d3d9-4be3-8332-70e405970f0d",
+		"tenantId": "7cc6c2d1-87f7-4d05-ba06-635267106125"
+	}
+}
