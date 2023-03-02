@@ -11,6 +11,9 @@
 		"onpremServer_connectionString": {
 			"value": ""
 		},
+		"satyamDB2_connectionString": {
+			"value": ""
+		},
 		"SharedIRfromdemo_properties_typeProperties_linkedInfo_resourceId": {
 			"value": "/subscriptions/dbda8b01-6aab-48c4-b253-2e1297b6cbe1/resourcegroups/satyamtesting/providers/Microsoft.DataFactory/factories/ADFsatyamdemo/integrationruntimes/satyamonprem"
 		}
