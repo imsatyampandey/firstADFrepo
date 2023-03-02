@@ -1,0 +1,25 @@
+{
+	"name": "dailyrun",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "upsert",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2023-03-02T13:12:00Z",
+				"endTime": "2023-03-04T13:12:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}
