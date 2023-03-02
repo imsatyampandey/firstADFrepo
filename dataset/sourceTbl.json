@@ -1,0 +1,30 @@
+{
+	"name": "sourceTbl",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "satyamDB2",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "name",
+				"type": "nvarchar"
+			},
+			{
+				"name": "lastmodifiedDate",
+				"type": "date"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "source_tbl"
+		}
+	}
+}
