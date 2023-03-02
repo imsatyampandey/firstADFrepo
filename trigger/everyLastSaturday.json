@@ -1,0 +1,33 @@
+{
+	"name": "everyLastSaturday",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "parametierizedPipeline",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Month",
+				"interval": 1,
+				"startTime": "2023-03-25T12:17:00",
+				"endTime": "2023-03-26T12:17:00",
+				"timeZone": "India Standard Time",
+				"schedule": {
+					"monthlyOccurrences": [
+						{
+							"day": "Saturday",
+							"occurrence": -1
+						}
+					]
+				}
+			}
+		}
+	}
+}
