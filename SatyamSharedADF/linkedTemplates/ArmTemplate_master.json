@@ -11,6 +11,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'AzureBlobStorage1'"
 		},
+		"AzureDataLakeStorage1_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage1'"
+		},
 		"onpremServer_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'onpremServer'"
@@ -18,6 +22,10 @@
 		"satyamDB2_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'satyamDB2'"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://storagedemosatyam.dfs.core.windows.net/"
 		},
 		"SharedIRfromdemo_properties_typeProperties_linkedInfo_resourceId": {
 			"type": "string",
@@ -53,11 +61,17 @@
 					"AzureBlobStorage1_connectionString": {
 						"value": "[parameters('AzureBlobStorage1_connectionString')]"
 					},
+					"AzureDataLakeStorage1_accountKey": {
+						"value": "[parameters('AzureDataLakeStorage1_accountKey')]"
+					},
 					"satyamDB2_connectionString": {
 						"value": "[parameters('satyamDB2_connectionString')]"
 					},
 					"onpremServer_connectionString": {
 						"value": "[parameters('onpremServer_connectionString')]"
+					},
+					"AzureDataLakeStorage1_properties_typeProperties_url": {
+						"value": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]"
 					},
 					"SharedIRfromdemo_properties_typeProperties_linkedInfo_resourceId": {
 						"value": "[parameters('SharedIRfromdemo_properties_typeProperties_linkedInfo_resourceId')]"

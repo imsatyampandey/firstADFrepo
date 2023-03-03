@@ -8,11 +8,17 @@
 		"AzureBlobStorage1_connectionString": {
 			"value": ""
 		},
+		"AzureDataLakeStorage1_accountKey": {
+			"value": ""
+		},
 		"onpremServer_connectionString": {
 			"value": ""
 		},
 		"satyamDB2_connectionString": {
 			"value": ""
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"value": "https://storagedemosatyam.dfs.core.windows.net/"
 		},
 		"SharedIRfromdemo_properties_typeProperties_linkedInfo_resourceId": {
 			"value": "/subscriptions/dbda8b01-6aab-48c4-b253-2e1297b6cbe1/resourcegroups/satyamtesting/providers/Microsoft.DataFactory/factories/ADFsatyamdemo/integrationruntimes/satyamonprem"
