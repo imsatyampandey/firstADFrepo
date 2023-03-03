@@ -35,7 +35,7 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "Last modified date",
+						"name": "lookup old watermark",
 						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
@@ -49,19 +49,22 @@
 						"typeProperties": {
 							"source": {
 								"type": "AzureSqlSource",
-								"sqlReaderQuery": "\nselect MAX(lastmodifieddate)\nfrom source_tbl",
+								"sqlReaderQuery": {
+									"value": "SELECT waterMarkVal\nFROM [dbo].[WaterMark]\nWHERE tableName = '@{pipeline().parameters.finalTableName}'",
+									"type": "Expression"
+								},
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "sourceTbl",
+								"referenceName": "watermarkTable",
 								"type": "DatasetReference",
 								"parameters": {}
 							}
 						}
 					},
 					{
-						"name": "last load date",
+						"name": "lookup New watermark",
 						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
@@ -74,30 +77,33 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": "select lastloaddate from target_tbl",
+								"type": "SqlServerSource",
+								"sqlReaderQuery": {
+									"value": "SELECT max(@{pipeline().parameters.waterMarkCol}) as NewWaterMarkVal from @{pipeline().parameters.srcTableName}",
+									"type": "Expression"
+								},
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "targettbl",
+								"referenceName": "onPremSourceTable",
 								"type": "DatasetReference",
 								"parameters": {}
 							}
 						}
 					},
 					{
-						"name": "Copy data1",
+						"name": "Copy data to staging",
 						"type": "Copy",
 						"dependsOn": [
 							{
-								"activity": "Last modified date",
+								"activity": "lookup old watermark",
 								"dependencyConditions": [
 									"Succeeded"
 								]
 							},
 							{
-								"activity": "last load date",
+								"activity": "lookup New watermark",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -113,9 +119,9 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "AzureSqlSource",
+								"type": "SqlServerSource",
 								"sqlReaderQuery": {
-									"value": "select * from source_tbl \nwhere lastmodifieddate>='@{activity('Last modified date').output.firstRow}' and lastmodifieddate > '@{activity('last load date').output.firstRow}'",
+									"value": "select * from @{pipeline().parameters.srcTableName}\nwhere @{pipeline().parameters.waterMarkCol} > \n'@{activity('lookup old watermark').output.firstRow.waterMarkVal}' \nand @{pipeline().parameters.waterMarkCol} <= \n'@{activity('lookup New watermark').output.firstRow.NewwaterMarkVal}'",
 									"type": "Expression"
 								},
 								"queryTimeout": "02:00:00",
@@ -123,8 +129,13 @@
 							},
 							"sink": {
 								"type": "AzureSqlSink",
+								"preCopyScript": {
+									"value": "truncate table @{pipeline().parameters.stgTableName}",
+									"type": "Expression"
+								},
 								"writeBehavior": "insert",
-								"sqlWriterUseTableLock": false
+								"sqlWriterUseTableLock": false,
+								"disableMetricsCollection": false
 							},
 							"enableStaging": false,
 							"translator": {
@@ -138,29 +149,127 @@
 						},
 						"inputs": [
 							{
-								"referenceName": "sourceTbl",
+								"referenceName": "onPremSourceTable",
 								"type": "DatasetReference",
 								"parameters": {}
 							}
 						],
 						"outputs": [
 							{
-								"referenceName": "targettbl",
+								"referenceName": "AzureSqlStagingtabl",
 								"type": "DatasetReference",
 								"parameters": {}
 							}
 						]
+					},
+					{
+						"name": "merge data from stage to target",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Copy data to staging",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[sp_upsert_student]"
+						},
+						"linkedServiceName": {
+							"referenceName": "satyamDB2",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "update watermark table",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "merge data from stage to target",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[sp_Updatewatermark]",
+							"storedProcedureParameters": {
+								"LastModifiedtime": {
+									"value": {
+										"value": "@activity('lookup New watermark').output.firstRow.NewWaterMarkVal",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"TableName": {
+									"value": {
+										"value": "@pipeline().parameters.finalTableName",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "satyamDB2",
+							"type": "LinkedServiceReference"
+						}
 					}
 				],
 				"policy": {
 					"elapsedTimeMetric": {},
 					"cancelAfter": {}
 				},
+				"parameters": {
+					"finalTableName": {
+						"type": "string",
+						"defaultValue": "Student"
+					},
+					"srcTableName": {
+						"type": "string",
+						"defaultValue": "Student"
+					},
+					"waterMarkCol": {
+						"type": "string",
+						"defaultValue": "updateDate"
+					},
+					"stgTableName": {
+						"type": "string",
+						"defaultValue": "stgStudent"
+					},
+					"storedProcUpsert": {
+						"type": "string",
+						"defaultValue": "sp_upsert_student"
+					},
+					"storedProcWaterMark": {
+						"type": "string",
+						"defaultValue": "sp_Updatewatermark"
+					}
+				},
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/sourceTbl')]",
-				"[concat(variables('factoryId'), '/datasets/targettbl')]"
+				"[concat(variables('factoryId'), '/datasets/watermarkTable')]",
+				"[concat(variables('factoryId'), '/datasets/onPremSourceTable')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSqlStagingtabl')]",
+				"[concat(variables('factoryId'), '/linkedServices/satyamDB2')]"
 			]
 		},
 		{
@@ -422,7 +531,7 @@
 						},
 						"inputs": [
 							{
-								"referenceName": "sourceTbl",
+								"referenceName": "AzureSqlStagingtabl",
 								"type": "DatasetReference",
 								"parameters": {}
 							}
@@ -443,8 +552,43 @@
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/sourceTbl')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSqlStagingtabl')]",
 				"[concat(variables('factoryId'), '/datasets/targettbl')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlStagingtabl')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "satyamDB2",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "lastmodifiedDate",
+						"type": "date"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "stgStudent"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/satyamDB2')]"
 			]
 		},
 		{
@@ -507,38 +651,53 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/sourceTbl')]",
+			"name": "[concat(parameters('factoryName'), '/onPremSourceTable')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"linkedServiceName": {
-					"referenceName": "satyamDB2",
+					"referenceName": "onpremServer",
 					"type": "LinkedServiceReference"
 				},
 				"annotations": [],
-				"type": "AzureSqlTable",
+				"type": "SqlServerTable",
 				"schema": [
 					{
-						"name": "id",
+						"name": "studentId",
 						"type": "int",
 						"precision": 10
 					},
 					{
-						"name": "name",
-						"type": "nvarchar"
+						"name": "studentName",
+						"type": "varchar"
 					},
 					{
-						"name": "lastmodifiedDate",
-						"type": "date"
+						"name": "stream",
+						"type": "varchar"
+					},
+					{
+						"name": "marks",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "createDate",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "updateDate",
+						"type": "datetime2",
+						"scale": 7
 					}
 				],
 				"typeProperties": {
 					"schema": "dbo",
-					"table": "source_tbl"
+					"table": "Student"
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/satyamDB2')]"
+				"[concat(variables('factoryId'), '/linkedServices/onpremServer')]"
 			]
 		},
 		{
@@ -570,6 +729,37 @@
 				"typeProperties": {
 					"schema": "dbo",
 					"table": "target_tbl"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/satyamDB2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/watermarkTable')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "satyamDB2",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "tableName",
+						"type": "varchar"
+					},
+					{
+						"name": "waterMarkVal",
+						"type": "datetime2",
+						"scale": 7
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "WaterMark"
 				}
 			},
 			"dependsOn": [
@@ -635,6 +825,13 @@
 							"type": "PipelineReference"
 						},
 						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "incrementalLoadTask",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
 					}
 				],
 				"type": "ScheduleTrigger",
@@ -644,12 +841,14 @@
 						"interval": 1,
 						"startTime": "2023-03-02T13:12:00Z",
 						"endTime": "2023-03-04T13:12:00Z",
-						"timeZone": "UTC"
+						"timeZone": "UTC",
+						"schedule": {}
 					}
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/upsert')]"
+				"[concat(variables('factoryId'), '/pipelines/upsert')]",
+				"[concat(variables('factoryId'), '/pipelines/incrementalLoadTask')]"
 			]
 		},
 		{
