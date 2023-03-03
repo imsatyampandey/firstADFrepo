@@ -1,5 +1,5 @@
 {
-	"name": "AzureSqlStagingtabl",
+	"name": "watermarkTable",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "satyamDB2",
@@ -9,22 +9,18 @@
 		"type": "AzureSqlTable",
 		"schema": [
 			{
-				"name": "id",
-				"type": "int",
-				"precision": 10
+				"name": "tableName",
+				"type": "varchar"
 			},
 			{
-				"name": "name",
-				"type": "nvarchar"
-			},
-			{
-				"name": "lastmodifiedDate",
-				"type": "date"
+				"name": "waterMarkVal",
+				"type": "datetime2",
+				"scale": 7
 			}
 		],
 		"typeProperties": {
 			"schema": "dbo",
-			"table": "stgStudent"
+			"table": "WaterMark"
 		}
 	}
 }
