@@ -81,6 +81,9 @@
 				"type": "String"
 			}
 		},
+		"folder": {
+			"name": "Task adf 101"
+		},
 		"annotations": [],
 		"lastPublishTime": "2023-02-28T10:58:49Z"
 	},

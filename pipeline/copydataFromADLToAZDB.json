@@ -138,6 +138,9 @@
 				"type": "String"
 			}
 		},
+		"folder": {
+			"name": "Task adf 101"
+		},
 		"annotations": []
 	}
 }
