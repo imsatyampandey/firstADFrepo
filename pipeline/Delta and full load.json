@@ -124,7 +124,7 @@
 										"type": "Lookup",
 										"dependsOn": [
 											{
-												"activity": "Copy data full load",
+												"activity": "Set variable1",
 												"dependencyConditions": [
 													"Succeeded"
 												]
@@ -142,7 +142,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "update lookuptable \nset lastupdatedate = @{utcNow()}, \nwhere tablename='@{item().tablename}'\n\nselect getdate();\n",
+													"value": "update lookuptable \nset lastupdatedate = '@{variables('gettime')}', \nwhere tablename='@{item().tablename}'\n\nselect getdate();\n",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
@@ -153,6 +153,26 @@
 												"type": "DatasetReference"
 											},
 											"firstRowOnly": false
+										}
+									},
+									{
+										"name": "Set variable1",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Copy data full load",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "gettime",
+											"value": {
+												"value": "@utcnow()",
+												"type": "Expression"
+											}
 										}
 									}
 								],
@@ -332,6 +352,11 @@
 				}
 			}
 		],
+		"variables": {
+			"gettime": {
+				"type": "String"
+			}
+		},
 		"folder": {
 			"name": "deltaload"
 		},
