@@ -183,7 +183,7 @@
 												"referenceName": "Lookup_table",
 												"type": "DatasetReference"
 											},
-											"firstRowOnly": false
+											"firstRowOnly": true
 										}
 									},
 									{
