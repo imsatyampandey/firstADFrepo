@@ -215,7 +215,7 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "select convert(date,Lastupdatedate+1,120) as date_comp from lookuptable where TableName = '@{item().Tablename}';",
+															"value": "select convert(date,Lastupdatedate,120) as date_comp from lookuptable where TableName = '@{item().Tablename}';",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
@@ -252,7 +252,7 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "select * from @{item().TableName} where convert(date,added_date,120) >= '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
+															"value": "select * from @{item().TableName} where convert(date,added_date,120) > '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
