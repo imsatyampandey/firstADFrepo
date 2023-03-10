@@ -1257,6 +1257,10 @@
 													},
 													"sink": {
 														"type": "AzureSqlSink",
+														"preCopyScript": {
+															"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().tablename}')\n    TRUNCATE table @{item().tablename}",
+															"type": "Expression"
+														},
 														"writeBehavior": "insert",
 														"sqlWriterUseTableLock": false,
 														"tableOption": "autoCreate",
@@ -1295,7 +1299,7 @@
 												]
 											},
 											{
-												"name": "lastupdate from targettable",
+												"name": "update delta table last updatedate",
 												"type": "Lookup",
 												"dependsOn": [
 													{
@@ -1315,47 +1319,9 @@
 												"userProperties": [],
 												"typeProperties": {
 													"source": {
-														"type": "AzureSqlSource",
-														"sqlReaderQuery": {
-															"value": "select max(added_date) as upd_date from @{item().TableName}",
-															"type": "Expression"
-														},
-														"queryTimeout": "02:00:00",
-														"partitionOption": "None"
-													},
-													"dataset": {
-														"referenceName": "deltatraget_table",
-														"type": "DatasetReference",
-														"parameters": {
-															"tartbl": "@item().tablename"
-														}
-													}
-												}
-											},
-											{
-												"name": "update delta table last updatedate",
-												"type": "Lookup",
-												"dependsOn": [
-													{
-														"activity": "lastupdate from targettable",
-														"dependencyConditions": [
-															"Succeeded"
-														]
-													}
-												],
-												"policy": {
-													"timeout": "0.12:00:00",
-													"retry": 0,
-													"retryIntervalInSeconds": 30,
-													"secureOutput": false,
-													"secureInput": false
-												},
-												"userProperties": [],
-												"typeProperties": {
-													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "update lookuptable \nset lastupdatedate = '@{activity('lastupdate from targettable').output.firstRow.upd_date}', deltaflag=1\nwhere tablename='@{item().tablename}'",
+															"value": "update lookuptable \nset lastupdatedate = @{utcNow()}, \nwhere tablename='@{item().tablename}'\n\nselect getdate();\n",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
@@ -1527,7 +1493,7 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "update lookuptable\nset lastupdatedate= '@{activity('Incremental Load Target Table Max Added Date').output.firstRow.upd_date}' where tablename='@{item().tablename}';\n\n",
+															"value": "update lookuptable\nset lastupdatedate= '@{activity('Incremental Load Target Table Max Added Date').output.firstRow.upd_date}' where tablename='@{item().tablename}';\nselect getdate();\n",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
