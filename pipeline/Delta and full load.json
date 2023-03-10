@@ -79,7 +79,7 @@
 											"sink": {
 												"type": "AzureSqlSink",
 												"preCopyScript": {
-													"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().tablename}')\n    TRUNCATE table @{item().tablename}",
+													"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().tablename}')\n    TRUNCATE table @{item().tablename};",
 													"type": "Expression"
 												},
 												"writeBehavior": "insert",
@@ -209,7 +209,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select * from @{item().TableName} where substring(convert(varchar(30),added_date,120),0,11) >= '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
+													"value": "select * from @{item().TableName} where convert(date,added_date,120) >= '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
