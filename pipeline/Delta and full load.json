@@ -124,7 +124,7 @@
 										"type": "Lookup",
 										"dependsOn": [
 											{
-												"activity": "Set variable1",
+												"activity": "Copy data full load",
 												"dependencyConditions": [
 													"Succeeded"
 												]
@@ -142,7 +142,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "update lookuptable \nset lastupdatedate = '@{variables('gettime')}'\nwhere tablename='@{item().tablename}';\n\n\nselect getdate();\n",
+													"value": "update lookuptable \nset lastupdatedate = getdate()\nwhere tablename='@{item().tablename}';\n\n\nselect getdate();\n",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
@@ -153,26 +153,6 @@
 												"type": "DatasetReference"
 											},
 											"firstRowOnly": false
-										}
-									},
-									{
-										"name": "Set variable1",
-										"type": "SetVariable",
-										"dependsOn": [
-											{
-												"activity": "Copy data full load",
-												"dependencyConditions": [
-													"Succeeded"
-												]
-											}
-										],
-										"userProperties": [],
-										"typeProperties": {
-											"variableName": "gettime",
-											"value": {
-												"value": "@utcnow()",
-												"type": "Expression"
-											}
 										}
 									}
 								],
