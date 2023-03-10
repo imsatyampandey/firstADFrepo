@@ -142,7 +142,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "update lookuptable \nset lastupdatedate = '@{variables('gettime')}', \nwhere tablename='@{item().tablename}'\n\nselect getdate();\n",
+													"value": "update lookuptable \nset lastupdatedate = '@{variables('gettime')}', \nwhere tablename='@{item().tablename}';\n\\n\\nselect getdate();\\n\\n\"\n\n\n",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
