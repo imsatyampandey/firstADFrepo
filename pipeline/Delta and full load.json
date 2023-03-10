@@ -142,7 +142,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "update lookuptable \nset lastupdatedate = '@{variables('gettime')}', \nwhere tablename='@{item().tablename}';\n\\n\\nselect getdate();\\n\\n\"\n\n\n",
+													"value": "update lookuptable \nset lastupdatedate = '@{variables('gettime')}'\nwhere tablename='@{item().tablename}';\n\n\nselect getdate();\n",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
@@ -193,7 +193,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select substring(convert(varchar(30),Lastupdatedate+1,120),0,11) as date_comp from lookuptable where TableName = '@{item().TableName}';\"",
+													"value": "select substring(convert(varchar(30),Lastupdatedate+1,120),0,11) as date_comp from lookuptable where TableName = '@{item().Table_Name}';\"",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
