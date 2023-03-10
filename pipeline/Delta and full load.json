@@ -173,7 +173,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select convert(date,Lastupdatedate+1,120) as date_comp from lookuptable where TableName = '@{item().Tablename}';",
+													"value": "select convert(date,Lastupdatedate,120) as date_comp from lookuptable where TableName = '@{item().Tablename}';",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
