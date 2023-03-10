@@ -1,0 +1,20 @@
+{
+	"name": "deltasourcetbl",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "onpremServer",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"tablname": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "dbo"
+		}
+	}
+}

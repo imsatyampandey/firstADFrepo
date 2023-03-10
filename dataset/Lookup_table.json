@@ -1,0 +1,32 @@
+{
+	"name": "Lookup_table",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "onpremServer",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [
+			{
+				"name": "TableName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "DeltaFlag",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "LastUpdateDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "lookupTable"
+		}
+	}
+}
