@@ -913,7 +913,7 @@
 													"sink": {
 														"type": "AzureSqlSink",
 														"preCopyScript": {
-															"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().tablename}')\n    TRUNCATE table @{item().tablename}",
+															"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().tablename}')\n    TRUNCATE table @{item().tablename};",
 															"type": "Expression"
 														},
 														"writeBehavior": "insert",
@@ -958,7 +958,7 @@
 												"type": "Lookup",
 												"dependsOn": [
 													{
-														"activity": "Set variable1",
+														"activity": "Copy data full load",
 														"dependencyConditions": [
 															"Succeeded"
 														]
@@ -976,7 +976,7 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "update lookuptable \nset lastupdatedate = '@{variables('gettime')}', \nwhere tablename='@{item().tablename}'\n\nselect getdate();\n",
+															"value": "update lookuptable \nset lastupdatedate = getdate()\nwhere tablename='@{item().tablename}';\n\n\nselect getdate();\n",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
@@ -988,26 +988,6 @@
 														"parameters": {}
 													},
 													"firstRowOnly": false
-												}
-											},
-											{
-												"name": "Set variable1",
-												"type": "SetVariable",
-												"dependsOn": [
-													{
-														"activity": "Copy data full load",
-														"dependencyConditions": [
-															"Succeeded"
-														]
-													}
-												],
-												"userProperties": [],
-												"typeProperties": {
-													"variableName": "gettime",
-													"value": {
-														"value": "@utcnow()",
-														"type": "Expression"
-													}
 												}
 											}
 										],
@@ -1028,7 +1008,7 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "select substring(convert(varchar(30),Lastupdatedate+1,120),0,11) as date_comp from lookuptable where TableName = '@{item().Table_Name}';\"",
+															"value": "select convert(date,Lastupdatedate+1,120) as date_comp from lookuptable where TableName = '@{item().Tablename}';",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
@@ -1039,7 +1019,7 @@
 														"type": "DatasetReference",
 														"parameters": {}
 													},
-													"firstRowOnly": false
+													"firstRowOnly": true
 												}
 											},
 											{
@@ -1065,7 +1045,7 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "select * from @{item().TableName} where substring(convert(varchar(30),added_date,120),0,11) >= '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
+															"value": "select * from @{item().TableName} where convert(date,added_date,120) >= '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
