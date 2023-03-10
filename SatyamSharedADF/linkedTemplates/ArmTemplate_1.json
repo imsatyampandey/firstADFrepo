@@ -130,6 +130,7 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
+								"sqlReaderQuery": "select * from lookuptable",
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
@@ -161,7 +162,7 @@
 							"isSequential": true,
 							"activities": [
 								{
-									"name": "If Condition1",
+									"name": "checking delta flag",
 									"type": "IfCondition",
 									"dependsOn": [],
 									"userProperties": [],
@@ -212,7 +213,7 @@
 														"type": "DatasetReference",
 														"parameters": {
 															"tablname": {
-																"value": "@item.tablename",
+																"value": "@item().tablename",
 																"type": "Expression"
 															}
 														}
@@ -321,7 +322,7 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "select substring(convert(varchar(30),Lastupdatedate+1,120),0,11) as date_comp from lookuptable where Table_Name = '@{item().Table_Name}';\"",
+															"value": "select substring(convert(varchar(30),Lastupdatedate+1,120),0,11) as date_comp from lookuptable where TableName = '@{item().Table_Name}';\"",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
@@ -461,7 +462,7 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "update lookuptable\nset lastupdatedate= '@{activity('Incremental Load Target Table Max Added Date').output.firstRow.upd_date}' where tablename='@{item().tablename}';\n\nselect getdate();",
+															"value": "update lookuptable\nset lastupdatedate= '@{activity('Incremental Load Target Table Max Added Date').output.firstRow.upd_date}' where tablename='@{item().tablename}';\n\n",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
