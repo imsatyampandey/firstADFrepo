@@ -209,7 +209,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select * from @{item().TableName} where convert(date,added_date,120) >= '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
+													"value": "select * from @{item().TableName} where convert(date,added_date,120) > '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
