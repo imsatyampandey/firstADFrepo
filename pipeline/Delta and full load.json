@@ -78,7 +78,9 @@
 											"sink": {
 												"type": "AzureSqlSink",
 												"writeBehavior": "insert",
-												"sqlWriterUseTableLock": false
+												"sqlWriterUseTableLock": false,
+												"tableOption": "autoCreate",
+												"disableMetricsCollection": false
 											},
 											"enableStaging": false,
 											"translator": {
@@ -240,7 +242,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select * from @{item().Table_Name} where substring(convert(varchar(30),added_date,120),0,11) >= '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
+													"value": "select * from @{item().TableName} where substring(convert(varchar(30),added_date,120),0,11) >= '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
