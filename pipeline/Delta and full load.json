@@ -17,6 +17,7 @@
 				"typeProperties": {
 					"source": {
 						"type": "SqlServerSource",
+						"sqlReaderQuery": "select * from lookuptable",
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
@@ -345,7 +346,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "update lookuptable\nset lastupdatedate= '@{activity('Incremental Load Target Table Max Added Date').output.firstRow.upd_date}' where tablename='@{item().tablename}';\n\nselect getdate();",
+													"value": "update lookuptable\nset lastupdatedate= '@{activity('Incremental Load Target Table Max Added Date').output.firstRow.upd_date}' where tablename='@{item().tablename}';\n\n",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
