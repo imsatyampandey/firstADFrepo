@@ -193,7 +193,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select substring(convert(varchar(30),Lastupdatedate+1,120),0,11) as date_comp from lookuptable where TableName = '@{item().Table_Name}';\"",
+													"value": "select substring(convert(varchar(30),Lastupdatedate+1,120),0,11) as date_comp from lookuptable where TableName = '@{item().Tablename}';\"",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
