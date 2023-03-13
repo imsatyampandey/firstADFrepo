@@ -59,7 +59,7 @@
 								},
 								"ifFalseActivities": [
 									{
-										"name": "Full load Copy ",
+										"name": "Full load Copy",
 										"type": "Copy",
 										"dependsOn": [],
 										"policy": {
@@ -133,7 +133,7 @@
 										"type": "Lookup",
 										"dependsOn": [
 											{
-												"activity": "Full load Copy ",
+												"activity": "Full load Copy",
 												"dependencyConditions": [
 													"Succeeded"
 												]
