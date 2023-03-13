@@ -397,6 +397,366 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/Delta and full load_copy1')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Lookup Table",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "select * from lookuptable",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "Lookup_table",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEachtable",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup Table",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup Table').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "checking delta flag",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@equals(item().deltaflag, 1)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Copy data full load",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"preCopyScript": {
+															"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().tablename}')\n    TRUNCATE table @{item().tablename};",
+															"type": "Expression"
+														},
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": "autoCreate",
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "deltasourcetbl",
+														"type": "DatasetReference",
+														"parameters": {
+															"tablname": {
+																"value": "@item().tablename",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "deltatraget_table",
+														"type": "DatasetReference",
+														"parameters": {
+															"tartbl": "@item().tablename"
+														}
+													}
+												]
+											},
+											{
+												"name": "update delta table last updatedate",
+												"type": "Lookup",
+												"dependsOn": [
+													{
+														"activity": "Copy data full load",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "update lookuptable \nset lastupdatedate = getdate()\nwhere tablename='@{item().tablename}';\n\n\nselect getdate();\n",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "Lookup_table",
+														"type": "DatasetReference",
+														"parameters": {}
+													},
+													"firstRowOnly": false
+												}
+											}
+										],
+										"ifTrueActivities": [
+											{
+												"name": "Lookup Incremental load",
+												"type": "Lookup",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "select Lastupdatedate as date_comp from lookuptable where TableName = '@{item().Tablename}';",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "Lookup_table",
+														"type": "DatasetReference",
+														"parameters": {}
+													},
+													"firstRowOnly": true
+												}
+											},
+											{
+												"name": "Copy data Incremental load",
+												"type": "Copy",
+												"dependsOn": [
+													{
+														"activity": "Lookup Incremental load",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "select * from @{item().tablename}\nwhere added_date > '@{activity('Lookup Incremental load').output.firstRow.date_comp}';\n",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": "autoCreate",
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "deltasourcetbl",
+														"type": "DatasetReference",
+														"parameters": {
+															"tablname": "@item().tablename"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "deltatraget_table",
+														"type": "DatasetReference",
+														"parameters": {
+															"tartbl": "@item().tablename"
+														}
+													}
+												]
+											},
+											{
+												"name": "Incremental Load Target Table Max Added Date",
+												"type": "Lookup",
+												"dependsOn": [
+													{
+														"activity": "Copy data Incremental load",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "select max(added_date) as upd_date from @{item().tablename}",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "deltasourcetbl",
+														"type": "DatasetReference",
+														"parameters": {
+															"tablname": "@item().tablename"
+														}
+													}
+												}
+											},
+											{
+												"name": "Incremental Load Update lookup Table Dates",
+												"type": "Lookup",
+												"dependsOn": [
+													{
+														"activity": "Incremental Load Target Table Max Added Date",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "update lookuptable\nset lastupdatedate= '@{activity('Incremental Load Target Table Max Added Date').output.firstRow.upd_date}' where tablename='@{item().tablename}';\nselect getdate();\n",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "Lookup_table",
+														"type": "DatasetReference",
+														"parameters": {}
+													},
+													"firstRowOnly": false
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"variables": {
+					"gettime": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "deltaload"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Lookup_table')]",
+				"[concat(variables('factoryId'), '/datasets/deltasourcetbl')]",
+				"[concat(variables('factoryId'), '/datasets/deltatraget_table')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/copydataFromADLToAZDB')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -1630,13 +1990,13 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/Delta and full load_copy1')]",
+			"name": "[concat(parameters('factoryName'), '/BronzeLayer')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"activities": [
 					{
-						"name": "Lookup Table",
+						"name": "Delta lookup table",
 						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
@@ -1650,12 +2010,12 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"sqlReaderQuery": "select * from lookuptable",
+								"sqlReaderQuery": "select * from deltalookup",
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "Lookup_table",
+								"referenceName": "deltalookup",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -1663,11 +2023,11 @@
 						}
 					},
 					{
-						"name": "ForEachtable",
+						"name": "ForEach Table",
 						"type": "ForEach",
 						"dependsOn": [
 							{
-								"activity": "Lookup Table",
+								"activity": "Delta lookup table",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -1676,24 +2036,24 @@
 						"userProperties": [],
 						"typeProperties": {
 							"items": {
-								"value": "@activity('Lookup Table').output.value",
+								"value": "@activity('Delta lookup table').output.value",
 								"type": "Expression"
 							},
 							"isSequential": true,
 							"activities": [
 								{
-									"name": "checking delta flag",
+									"name": "Delta Flag validator",
 									"type": "IfCondition",
 									"dependsOn": [],
 									"userProperties": [],
 									"typeProperties": {
 										"expression": {
-											"value": "@equals(item().deltaflag, 1)",
+											"value": "@equals(item().deltaflag,1)",
 											"type": "Expression"
 										},
 										"ifFalseActivities": [
 											{
-												"name": "Copy data full load",
+												"name": "Full load Copy ",
 												"type": "Copy",
 												"dependsOn": [],
 												"policy": {
@@ -1707,6 +2067,10 @@
 												"typeProperties": {
 													"source": {
 														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": " @concat('select * from',item().sourceSchema,'.',item().sourceTable)",
+															"type": "Expression"
+														},
 														"queryTimeout": "02:00:00",
 														"partitionOption": "None"
 													},
@@ -1733,11 +2097,15 @@
 												},
 												"inputs": [
 													{
-														"referenceName": "deltasourcetbl",
+														"referenceName": "DynamicSourceOnprem",
 														"type": "DatasetReference",
 														"parameters": {
-															"tablname": {
-																"value": "@item().tablename",
+															"SrcSchema": {
+																"value": "@item().sourceSchema",
+																"type": "Expression"
+															},
+															"SrcTable": {
+																"value": "@item().sourceTable",
 																"type": "Expression"
 															}
 														}
@@ -1745,20 +2113,21 @@
 												],
 												"outputs": [
 													{
-														"referenceName": "deltatraget_table",
+														"referenceName": "DynamicTargetTableOnAzSql",
 														"type": "DatasetReference",
 														"parameters": {
-															"tartbl": "@item().tablename"
+															"TarSchema": "@item().TargetSchema",
+															"TarTable": "@item().TargetTable"
 														}
 													}
 												]
 											},
 											{
-												"name": "update delta table last updatedate",
+												"name": "Update last update for full load",
 												"type": "Lookup",
 												"dependsOn": [
 													{
-														"activity": "Copy data full load",
+														"activity": "Full load Copy ",
 														"dependencyConditions": [
 															"Succeeded"
 														]
@@ -1776,24 +2145,24 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "update lookuptable \nset lastupdatedate = getdate()\nwhere tablename='@{item().tablename}';\n\n\nselect getdate();\n",
+															"value": "update Deltalookup\nset LastLoadDate = getdate()\nwhere sourceSchema= '@{item().sourceSchema}' and sourceTable = '@{item().sourceTable}';\n\n\nselect getdate();\n",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
 														"partitionOption": "None"
 													},
 													"dataset": {
-														"referenceName": "Lookup_table",
+														"referenceName": "deltalookup",
 														"type": "DatasetReference",
 														"parameters": {}
 													},
-													"firstRowOnly": false
+													"firstRowOnly": true
 												}
 											}
 										],
 										"ifTrueActivities": [
 											{
-												"name": "Lookup Incremental load",
+												"name": "last load date",
 												"type": "Lookup",
 												"dependsOn": [],
 												"policy": {
@@ -1808,26 +2177,25 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "select Lastupdatedate as date_comp from lookuptable where TableName = '@{item().Tablename}';",
+															"value": "select LastLoadDate from Deltalookup\nwhere sourceSchema= '@{item().sourceSchema}' and sourceTable= '@{item().sourceTable}'",
 															"type": "Expression"
 														},
 														"queryTimeout": "02:00:00",
 														"partitionOption": "None"
 													},
 													"dataset": {
-														"referenceName": "Lookup_table",
+														"referenceName": "deltalookup",
 														"type": "DatasetReference",
 														"parameters": {}
-													},
-													"firstRowOnly": true
+													}
 												}
 											},
 											{
-												"name": "Copy data Incremental load",
+												"name": "Copy data Source to Stage",
 												"type": "Copy",
 												"dependsOn": [
 													{
-														"activity": "Lookup Incremental load",
+														"activity": "last load date",
 														"dependencyConditions": [
 															"Succeeded"
 														]
@@ -1845,9 +2213,79 @@
 													"source": {
 														"type": "SqlServerSource",
 														"sqlReaderQuery": {
-															"value": "select * from @{item().tablename}\nwhere added_date > '@{activity('Lookup Incremental load').output.firstRow.date_comp}';\n",
+															"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date').output.firstrow.date_comp}'",
 															"type": "Expression"
 														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"preCopyScript": {
+															"value": "truncate table @{item().Targettable}",
+															"type": "Expression"
+														},
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": "autoCreate",
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "DynamicSourceOnprem",
+														"type": "DatasetReference",
+														"parameters": {
+															"SrcSchema": {
+																"value": "@item().sourceSchema",
+																"type": "Expression"
+															},
+															"SrcTable": "@item().sourceTable"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "StageforDelta",
+														"type": "DatasetReference",
+														"parameters": {
+															"schema": "@item().targetSchema",
+															"Table": "@item().targetTable"
+														}
+													}
+												]
+											},
+											{
+												"name": "Stage to Target",
+												"type": "Copy",
+												"dependsOn": [
+													{
+														"activity": "Copy data Source to Stage",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
 														"queryTimeout": "02:00:00",
 														"partitionOption": "None"
 													},
@@ -1870,29 +2308,37 @@
 												},
 												"inputs": [
 													{
-														"referenceName": "deltasourcetbl",
+														"referenceName": "StageforDelta",
 														"type": "DatasetReference",
 														"parameters": {
-															"tablname": "@item().tablename"
+															"schema": {
+																"value": "@item().targetschema",
+																"type": "Expression"
+															},
+															"Table": {
+																"value": "@item().Targettable",
+																"type": "Expression"
+															}
 														}
 													}
 												],
 												"outputs": [
 													{
-														"referenceName": "deltatraget_table",
+														"referenceName": "DynamicTargetTableOnAzSql",
 														"type": "DatasetReference",
 														"parameters": {
-															"tartbl": "@item().tablename"
+															"TarSchema": "@item().targetschema",
+															"TarTable": "@item().targetTable"
 														}
 													}
 												]
 											},
 											{
-												"name": "Incremental Load Target Table Max Added Date",
-												"type": "Lookup",
+												"name": "update last load date",
+												"type": "SqlServerStoredProcedure",
 												"dependsOn": [
 													{
-														"activity": "Copy data Incremental load",
+														"activity": "Stage to Target",
 														"dependencyConditions": [
 															"Succeeded"
 														]
@@ -1907,59 +2353,34 @@
 												},
 												"userProperties": [],
 												"typeProperties": {
-													"source": {
-														"type": "SqlServerSource",
-														"sqlReaderQuery": {
-															"value": "select max(added_date) as upd_date from @{item().tablename}",
-															"type": "Expression"
+													"storedProcedureName": "[[dbo].[sp_updateLastLoadDate]",
+													"storedProcedureParameters": {
+														"lastLoadDate": {
+															"value": {
+																"value": "select max(added_date) from @{item().targettable}",
+																"type": "Expression"
+															},
+															"type": "DateTime"
 														},
-														"queryTimeout": "02:00:00",
-														"partitionOption": "None"
-													},
-													"dataset": {
-														"referenceName": "deltasourcetbl",
-														"type": "DatasetReference",
-														"parameters": {
-															"tablname": "@item().tablename"
+														"TargetSchema": {
+															"value": {
+																"value": "@item().targetschema",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"TargetTable": {
+															"value": {
+																"value": "@item().Targettable",
+																"type": "Expression"
+															},
+															"type": "String"
 														}
 													}
-												}
-											},
-											{
-												"name": "Incremental Load Update lookup Table Dates",
-												"type": "Lookup",
-												"dependsOn": [
-													{
-														"activity": "Incremental Load Target Table Max Added Date",
-														"dependencyConditions": [
-															"Succeeded"
-														]
-													}
-												],
-												"policy": {
-													"timeout": "0.12:00:00",
-													"retry": 0,
-													"retryIntervalInSeconds": 30,
-													"secureOutput": false,
-													"secureInput": false
 												},
-												"userProperties": [],
-												"typeProperties": {
-													"source": {
-														"type": "SqlServerSource",
-														"sqlReaderQuery": {
-															"value": "update lookuptable\nset lastupdatedate= '@{activity('Incremental Load Target Table Max Added Date').output.firstRow.upd_date}' where tablename='@{item().tablename}';\nselect getdate();\n",
-															"type": "Expression"
-														},
-														"queryTimeout": "02:00:00",
-														"partitionOption": "None"
-													},
-													"dataset": {
-														"referenceName": "Lookup_table",
-														"type": "DatasetReference",
-														"parameters": {}
-													},
-													"firstRowOnly": false
+												"linkedServiceName": {
+													"referenceName": "onpremServer",
+													"type": "LinkedServiceReference"
 												}
 											}
 										]
@@ -1973,20 +2394,170 @@
 					"elapsedTimeMetric": {},
 					"cancelAfter": {}
 				},
-				"variables": {
-					"gettime": {
-						"type": "String"
-					}
-				},
 				"folder": {
-					"name": "deltaload"
+					"name": "Ingest layer"
 				},
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/Lookup_table')]",
-				"[concat(variables('factoryId'), '/datasets/deltasourcetbl')]",
-				"[concat(variables('factoryId'), '/datasets/deltatraget_table')]"
+				"[concat(variables('factoryId'), '/datasets/deltalookup')]",
+				"[concat(variables('factoryId'), '/datasets/DynamicSourceOnprem')]",
+				"[concat(variables('factoryId'), '/datasets/StageforDelta')]",
+				"[concat(variables('factoryId'), '/datasets/DynamicTargetTableOnAzSql')]",
+				"[concat(variables('factoryId'), '/linkedServices/onpremServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/deltalookup')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "onpremServer",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "SourceSchema",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SourceTable",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TargetSchema",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TargetTable",
+						"type": "nvarchar"
+					},
+					{
+						"name": "DeltaFlag",
+						"type": "bit"
+					},
+					{
+						"name": "LastLoadDate",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "DeltaLookUp"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/onpremServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DynamicSourceOnprem')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "onpremServer",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"SrcSchema": {
+						"type": "string"
+					},
+					"SrcTable": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().srcSchema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().srcTable",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/onpremServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DynamicTargetTableOnAzSql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "satyamDB2",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"TarSchema": {
+						"type": "string"
+					},
+					"TarTable": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().TarSchema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().TarTable",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/satyamDB2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/StageforDelta')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "satyamDB2",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"schema": {
+						"type": "string"
+					},
+					"Table": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().Table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/satyamDB2')]"
 			]
 		}
 	]

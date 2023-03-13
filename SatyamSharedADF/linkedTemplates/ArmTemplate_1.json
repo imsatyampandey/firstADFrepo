@@ -13,270 +13,141 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('factoryName'), '/incrementalLoadTask')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
+			"name": "[concat(parameters('factoryName'), '/onPremSourceTable')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
-				"activities": [
+				"linkedServiceName": {
+					"referenceName": "onpremServer",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
 					{
-						"name": "lookup old watermark",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "SELECT waterMarkVal\nFROM [dbo].[WaterMark]\nWHERE tableName = '@{pipeline().parameters.finalTableName}'",
-									"type": "Expression"
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "watermarkTable",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
+						"name": "studentId",
+						"type": "int",
+						"precision": 10
 					},
 					{
-						"name": "lookup New watermark",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlServerSource",
-								"sqlReaderQuery": {
-									"value": "SELECT max(@{pipeline().parameters.waterMarkCol}) as NewWaterMarkVal from @{pipeline().parameters.srcTableName}",
-									"type": "Expression"
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "onPremSourceTable",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
+						"name": "studentName",
+						"type": "varchar"
 					},
 					{
-						"name": "Copy data to staging",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "lookup old watermark",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							},
-							{
-								"activity": "lookup New watermark",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlServerSource",
-								"sqlReaderQuery": {
-									"value": "select * from @{pipeline().parameters.srcTableName}\nwhere @{pipeline().parameters.waterMarkCol} > \n'@{activity('lookup old watermark').output.firstRow.waterMarkVal}' \nand @{pipeline().parameters.waterMarkCol} <= \n'@{activity('lookup New watermark').output.firstRow.NewwaterMarkVal}'",
-									"type": "Expression"
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"sink": {
-								"type": "AzureSqlSink",
-								"preCopyScript": {
-									"value": "truncate table @{pipeline().parameters.stgTableName}",
-									"type": "Expression"
-								},
-								"writeBehavior": "insert",
-								"sqlWriterUseTableLock": false,
-								"disableMetricsCollection": false
-							},
-							"enableStaging": false,
-							"logSettings": {
-								"enableCopyActivityLog": true,
-								"copyActivityLogSettings": {
-									"logLevel": "Warning",
-									"enableReliableLogging": false
-								},
-								"logLocationSettings": {
-									"linkedServiceName": {
-										"referenceName": "AzureDataLakeStorage1",
-										"type": "LinkedServiceReference"
-									},
-									"path": "imp/log"
-								}
-							},
-							"translator": {
-								"type": "TabularTranslator",
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "onPremSourceTable",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "AzureSqlStagingtabl",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
+						"name": "stream",
+						"type": "varchar"
 					},
 					{
-						"name": "merge data from stage to target",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "Copy data to staging",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[sp_upsert_student]"
-						},
-						"linkedServiceName": {
-							"referenceName": "satyamDB2",
-							"type": "LinkedServiceReference"
-						}
+						"name": "marks",
+						"type": "int",
+						"precision": 10
 					},
 					{
-						"name": "update watermark table",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "merge data from stage to target",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[sp_Updatewatermark]",
-							"storedProcedureParameters": {
-								"LastModifiedtime": {
-									"value": {
-										"value": "@activity('lookup New watermark').output.firstRow.NewWaterMarkVal",
-										"type": "Expression"
-									},
-									"type": "DateTime"
-								},
-								"TableName": {
-									"value": {
-										"value": "@pipeline().parameters.finalTableName",
-										"type": "Expression"
-									},
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "satyamDB2",
-							"type": "LinkedServiceReference"
-						}
+						"name": "createDate",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "updateDate",
+						"type": "datetime2",
+						"scale": 7
 					}
 				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
-				},
-				"parameters": {
-					"finalTableName": {
-						"type": "string",
-						"defaultValue": "Student"
-					},
-					"srcTableName": {
-						"type": "string",
-						"defaultValue": "Student"
-					},
-					"waterMarkCol": {
-						"type": "string",
-						"defaultValue": "updateDate"
-					},
-					"stgTableName": {
-						"type": "string",
-						"defaultValue": "stgStudent"
-					},
-					"storedProcUpsert": {
-						"type": "string",
-						"defaultValue": "sp_upsert_student"
-					},
-					"storedProcWaterMark": {
-						"type": "string",
-						"defaultValue": "sp_Updatewatermark"
-					}
-				},
-				"folder": {
-					"name": "Task adf 101"
-				},
-				"annotations": []
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "Student"
+				}
 			},
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/parametierizedPipeline')]",
+			"name": "[concat(parameters('factoryName'), '/deltalookup')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "onpremServer",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "SourceSchema",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SourceTable",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TargetSchema",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TargetTable",
+						"type": "nvarchar"
+					},
+					{
+						"name": "DeltaFlag",
+						"type": "bit"
+					},
+					{
+						"name": "LastLoadDate",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "DeltaLookUp"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DynamicSourceOnprem')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "onpremServer",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"SrcSchema": {
+						"type": "string"
+					},
+					"SrcTable": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().srcSchema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().srcTable",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Delta and full load')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"activities": [
 					{
-						"name": "Copy data1",
-						"type": "Copy",
+						"name": "Lookup Table",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.12:00:00",
@@ -289,79 +160,338 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"sqlReaderQuery": "select * from employee",
+								"sqlReaderQuery": "select * from lookuptable",
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
-							"sink": {
-								"type": "DelimitedTextSink",
-								"storeSettings": {
-									"type": "AzureBlobStorageWriteSettings"
-								},
-								"formatSettings": {
-									"type": "DelimitedTextWriteSettings",
-									"quoteAllText": true,
-									"fileExtension": ".txt"
-								}
-							},
-							"enableStaging": false,
-							"translator": {
-								"type": "TabularTranslator",
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "SqlServerTable1",
+							"dataset": {
+								"referenceName": "Lookup_table",
 								"type": "DatasetReference",
-								"parameters": {
-									"dbname": {
-										"value": "@pipeline().parameters.tbalname",
-										"type": "Expression"
-									}
-								}
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEachtable",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup Table",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
-						"outputs": [
-							{
-								"referenceName": "DelimitedText1",
-								"type": "DatasetReference",
-								"parameters": {
-									"filename": {
-										"value": "@pipeline().parameters.filename",
-										"type": "Expression"
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup Table').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "checking delta flag",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@equals(item().deltaflag, 1)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Copy data full load",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"preCopyScript": {
+															"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().tablename}')\n    TRUNCATE table @{item().tablename};",
+															"type": "Expression"
+														},
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": "autoCreate",
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "deltasourcetbl",
+														"type": "DatasetReference",
+														"parameters": {
+															"tablname": {
+																"value": "@item().tablename",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "deltatraget_table",
+														"type": "DatasetReference",
+														"parameters": {
+															"tartbl": "@item().tablename"
+														}
+													}
+												]
+											},
+											{
+												"name": "update delta table last updatedate",
+												"type": "Lookup",
+												"dependsOn": [
+													{
+														"activity": "Copy data full load",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "update lookuptable \nset lastupdatedate = getdate()\nwhere tablename='@{item().tablename}';\n\n\nselect getdate();\n",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "Lookup_table",
+														"type": "DatasetReference",
+														"parameters": {}
+													},
+													"firstRowOnly": false
+												}
+											}
+										],
+										"ifTrueActivities": [
+											{
+												"name": "Lookup Incremental load",
+												"type": "Lookup",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "select Lastupdatedate as date_comp from lookuptable where TableName = '@{item().Tablename}';",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "Lookup_table",
+														"type": "DatasetReference",
+														"parameters": {}
+													},
+													"firstRowOnly": true
+												}
+											},
+											{
+												"name": "Copy data Incremental load",
+												"type": "Copy",
+												"dependsOn": [
+													{
+														"activity": "Lookup Incremental load",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "select * from @{item().TableName} where added_date > '@{activity('Lookup Incremental load').output.firstrow.date_comp}'",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": "autoCreate",
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "deltasourcetbl",
+														"type": "DatasetReference",
+														"parameters": {
+															"tablname": "@item().tablename"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "deltatraget_table",
+														"type": "DatasetReference",
+														"parameters": {
+															"tartbl": "@item().tablename"
+														}
+													}
+												]
+											},
+											{
+												"name": "Incremental Load Target Table Max Added Date",
+												"type": "Lookup",
+												"dependsOn": [
+													{
+														"activity": "Copy data Incremental load",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "select max(added_date) as upd_date from @{item().tablename}",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "deltasourcetbl",
+														"type": "DatasetReference",
+														"parameters": {
+															"tablname": "@item().tablename"
+														}
+													}
+												}
+											},
+											{
+												"name": "Incremental Load Update lookup Table Dates",
+												"type": "Lookup",
+												"dependsOn": [
+													{
+														"activity": "Incremental Load Target Table Max Added Date",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "update lookuptable\nset lastupdatedate= '@{activity('Incremental Load Target Table Max Added Date').output.firstRow.upd_date}' where tablename='@{item().tablename}';\nselect getdate();\n",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "Lookup_table",
+														"type": "DatasetReference",
+														"parameters": {}
+													},
+													"firstRowOnly": false
+												}
+											}
+										]
 									}
 								}
-							}
-						]
+							]
+						}
 					}
 				],
 				"policy": {
 					"elapsedTimeMetric": {},
 					"cancelAfter": {}
 				},
-				"parameters": {
-					"tbalname": {
-						"type": "string"
-					},
-					"filename": {
-						"type": "string"
-					}
-				},
 				"variables": {
-					"vartbalname": {
+					"gettime": {
 						"type": "String"
 					}
 				},
 				"folder": {
-					"name": "Task adf 101"
+					"name": "deltaload"
 				},
-				"annotations": [],
-				"lastPublishTime": "2023-02-28T10:58:49Z"
+				"annotations": []
 			},
 			"dependsOn": []
 		},
@@ -720,6 +850,776 @@
 				"annotations": []
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/incrementalLoadTask')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lookup old watermark",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT waterMarkVal\nFROM [dbo].[WaterMark]\nWHERE tableName = '@{pipeline().parameters.finalTableName}'",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "watermarkTable",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "lookup New watermark",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": {
+									"value": "SELECT max(@{pipeline().parameters.waterMarkCol}) as NewWaterMarkVal from @{pipeline().parameters.srcTableName}",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "onPremSourceTable",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Copy data to staging",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "lookup old watermark",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "lookup New watermark",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": {
+									"value": "select * from @{pipeline().parameters.srcTableName}\nwhere @{pipeline().parameters.waterMarkCol} > \n'@{activity('lookup old watermark').output.firstRow.waterMarkVal}' \nand @{pipeline().parameters.waterMarkCol} <= \n'@{activity('lookup New watermark').output.firstRow.NewwaterMarkVal}'",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"preCopyScript": {
+									"value": "truncate table @{pipeline().parameters.stgTableName}",
+									"type": "Expression"
+								},
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": false,
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"logSettings": {
+								"enableCopyActivityLog": true,
+								"copyActivityLogSettings": {
+									"logLevel": "Warning",
+									"enableReliableLogging": false
+								},
+								"logLocationSettings": {
+									"linkedServiceName": {
+										"referenceName": "AzureDataLakeStorage1",
+										"type": "LinkedServiceReference"
+									},
+									"path": "imp/log"
+								}
+							},
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "onPremSourceTable",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "AzureSqlStagingtabl",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "merge data from stage to target",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Copy data to staging",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[sp_upsert_student]"
+						},
+						"linkedServiceName": {
+							"referenceName": "satyamDB2",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "update watermark table",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "merge data from stage to target",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[sp_Updatewatermark]",
+							"storedProcedureParameters": {
+								"LastModifiedtime": {
+									"value": {
+										"value": "@activity('lookup New watermark').output.firstRow.NewWaterMarkVal",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"TableName": {
+									"value": {
+										"value": "@pipeline().parameters.finalTableName",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "satyamDB2",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"finalTableName": {
+						"type": "string",
+						"defaultValue": "Student"
+					},
+					"srcTableName": {
+						"type": "string",
+						"defaultValue": "Student"
+					},
+					"waterMarkCol": {
+						"type": "string",
+						"defaultValue": "updateDate"
+					},
+					"stgTableName": {
+						"type": "string",
+						"defaultValue": "stgStudent"
+					},
+					"storedProcUpsert": {
+						"type": "string",
+						"defaultValue": "sp_upsert_student"
+					},
+					"storedProcWaterMark": {
+						"type": "string",
+						"defaultValue": "sp_Updatewatermark"
+					}
+				},
+				"folder": {
+					"name": "Task adf 101"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/onPremSourceTable')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/parametierizedPipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "select * from employee",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "SqlServerTable1",
+								"type": "DatasetReference",
+								"parameters": {
+									"dbname": {
+										"value": "@pipeline().parameters.tbalname",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DelimitedText1",
+								"type": "DatasetReference",
+								"parameters": {
+									"filename": {
+										"value": "@pipeline().parameters.filename",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"tbalname": {
+						"type": "string"
+					},
+					"filename": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"vartbalname": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Task adf 101"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-02-28T10:58:49Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/BronzeLayer')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Delta lookup table",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "select * from deltalookup",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "deltalookup",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach Table",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Delta lookup table",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Delta lookup table').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "Delta Flag validator",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@equals(item().deltaflag,1)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Full load Copy ",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": " @concat('select * from',item().sourceSchema,'.',item().sourceTable)",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"preCopyScript": {
+															"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().tablename}')\n    TRUNCATE table @{item().tablename};",
+															"type": "Expression"
+														},
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": "autoCreate",
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "DynamicSourceOnprem",
+														"type": "DatasetReference",
+														"parameters": {
+															"SrcSchema": {
+																"value": "@item().sourceSchema",
+																"type": "Expression"
+															},
+															"SrcTable": {
+																"value": "@item().sourceTable",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "DynamicTargetTableOnAzSql",
+														"type": "DatasetReference",
+														"parameters": {
+															"TarSchema": "@item().TargetSchema",
+															"TarTable": "@item().TargetTable"
+														}
+													}
+												]
+											},
+											{
+												"name": "Update last update for full load",
+												"type": "Lookup",
+												"dependsOn": [
+													{
+														"activity": "Full load Copy ",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "update Deltalookup\nset LastLoadDate = getdate()\nwhere sourceSchema= '@{item().sourceSchema}' and sourceTable = '@{item().sourceTable}';\n\n\nselect getdate();\n",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "deltalookup",
+														"type": "DatasetReference",
+														"parameters": {}
+													},
+													"firstRowOnly": true
+												}
+											}
+										],
+										"ifTrueActivities": [
+											{
+												"name": "last load date",
+												"type": "Lookup",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "select LastLoadDate from Deltalookup\nwhere sourceSchema= '@{item().sourceSchema}' and sourceTable= '@{item().sourceTable}'",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "deltalookup",
+														"type": "DatasetReference",
+														"parameters": {}
+													}
+												}
+											},
+											{
+												"name": "Copy data Source to Stage",
+												"type": "Copy",
+												"dependsOn": [
+													{
+														"activity": "last load date",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date').output.firstrow.date_comp}'",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"preCopyScript": {
+															"value": "truncate table @{item().Targettable}",
+															"type": "Expression"
+														},
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": "autoCreate",
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "DynamicSourceOnprem",
+														"type": "DatasetReference",
+														"parameters": {
+															"SrcSchema": {
+																"value": "@item().sourceSchema",
+																"type": "Expression"
+															},
+															"SrcTable": "@item().sourceTable"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "StageforDelta",
+														"type": "DatasetReference",
+														"parameters": {
+															"schema": "@item().targetSchema",
+															"Table": "@item().targetTable"
+														}
+													}
+												]
+											},
+											{
+												"name": "Stage to Target",
+												"type": "Copy",
+												"dependsOn": [
+													{
+														"activity": "Copy data Source to Stage",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": "autoCreate",
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "StageforDelta",
+														"type": "DatasetReference",
+														"parameters": {
+															"schema": {
+																"value": "@item().targetschema",
+																"type": "Expression"
+															},
+															"Table": {
+																"value": "@item().Targettable",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "DynamicTargetTableOnAzSql",
+														"type": "DatasetReference",
+														"parameters": {
+															"TarSchema": "@item().targetschema",
+															"TarTable": "@item().targetTable"
+														}
+													}
+												]
+											},
+											{
+												"name": "update last load date",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [
+													{
+														"activity": "Stage to Target",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[[dbo].[sp_updateLastLoadDate]",
+													"storedProcedureParameters": {
+														"lastLoadDate": {
+															"value": {
+																"value": "select max(added_date) from @{item().targettable}",
+																"type": "Expression"
+															},
+															"type": "DateTime"
+														},
+														"TargetSchema": {
+															"value": {
+																"value": "@item().targetschema",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"TargetTable": {
+															"value": {
+																"value": "@item().Targettable",
+																"type": "Expression"
+															},
+															"type": "String"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "onpremServer",
+													"type": "LinkedServiceReference"
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"folder": {
+					"name": "Ingest layer"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/deltalookup')]",
+				"[concat(variables('factoryId'), '/datasets/DynamicSourceOnprem')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/dailyrun')]",
