@@ -54,7 +54,7 @@
 							"userProperties": [],
 							"typeProperties": {
 								"expression": {
-									"value": "@equals(item().deltaflag,1)",
+									"value": "@equals(item().deltaflag,true)",
 									"type": "Expression"
 								},
 								"ifFalseActivities": [
@@ -182,7 +182,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select LastLoadDate from Deltalookup\nwhere sourceSchema= '@{item().sourceSchema}' and sourceTable= '@{item().sourceTable}'",
+													"value": "select LastLoadDate as date_comp from Deltalookup\nwhere sourceSchema= '@{item().sourceSchema}' and sourceTable= '@{item().sourceTable}'",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
@@ -217,7 +217,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date').output.firstrow.date_comp}'",
+													"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date').output.firstRow.date_comp}'",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
