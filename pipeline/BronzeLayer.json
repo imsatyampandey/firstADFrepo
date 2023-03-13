@@ -160,6 +160,110 @@
 											"firstRowOnly": true
 										}
 									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "last load date",
+										"type": "Lookup",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SqlServerSource",
+												"sqlReaderQuery": {
+													"value": "select LastLoadDate from Deltalookup\nwhere sourceSchema= '@{item().sourceSchema}' and sourceTable= '@{item().sourceTable}'",
+													"type": "Expression"
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"dataset": {
+												"referenceName": "deltalookup",
+												"type": "DatasetReference"
+											}
+										}
+									},
+									{
+										"name": "Copy data Source to Stage",
+										"type": "Copy",
+										"dependsOn": [
+											{
+												"activity": "last load date",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SqlServerSource",
+												"sqlReaderQuery": {
+													"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date').output.firstrow.date_comp}'",
+													"type": "Expression"
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"sink": {
+												"type": "AzureSqlSink",
+												"preCopyScript": {
+													"value": "truncate table @{item().Targettable}",
+													"type": "Expression"
+												},
+												"writeBehavior": "insert",
+												"sqlWriterUseTableLock": false,
+												"tableOption": "autoCreate",
+												"disableMetricsCollection": false
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "DynamicSourceOnprem",
+												"type": "DatasetReference",
+												"parameters": {
+													"SrcSchema": {
+														"value": "@item().sourceSchema",
+														"type": "Expression"
+													},
+													"SrcTable": "@item().sourceTable"
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "StageforDelta",
+												"type": "DatasetReference",
+												"parameters": {
+													"schema": "@item().targetSchema",
+													"Table": "@item().targetTable"
+												}
+											}
+										]
+									}
 								]
 							}
 						}
