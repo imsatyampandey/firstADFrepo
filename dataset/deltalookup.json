@@ -1,0 +1,43 @@
+{
+	"name": "deltalookup",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "onpremServer",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [
+			{
+				"name": "SourceSchema",
+				"type": "nvarchar"
+			},
+			{
+				"name": "SourceTable",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TargetSchema",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TargetTable",
+				"type": "nvarchar"
+			},
+			{
+				"name": "DeltaFlag",
+				"type": "bit"
+			},
+			{
+				"name": "LastLoadDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "DeltaLookUp"
+		}
+	}
+}

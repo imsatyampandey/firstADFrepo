@@ -1,0 +1,30 @@
+{
+	"name": "DynamicTargetTableOnAzSql",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "satyamDB2",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"TarSchema": {
+				"type": "string"
+			},
+			"TarTable": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().TarSchema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().TarTable",
+				"type": "Expression"
+			}
+		}
+	}
+}

@@ -1,0 +1,30 @@
+{
+	"name": "DynamicSourceOnprem",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "onpremServer",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"SrcSchema": {
+				"type": "string"
+			},
+			"SrcTable": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().srcSchema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().srcTable",
+				"type": "Expression"
+			}
+		}
+	}
+}
