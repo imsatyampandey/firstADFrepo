@@ -167,7 +167,7 @@
 								],
 								"ifTrueActivities": [
 									{
-										"name": "last load date",
+										"name": "last load date in lookup",
 										"type": "Lookup",
 										"dependsOn": [],
 										"policy": {
@@ -199,7 +199,13 @@
 										"type": "Copy",
 										"dependsOn": [
 											{
-												"activity": "last load date",
+												"activity": "last load date in lookup",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											},
+											{
+												"activity": "listed tables recent date",
 												"dependencyConditions": [
 													"Succeeded"
 												]
@@ -217,7 +223,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date').output.firstRow.date_comp}'",
+													"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date in lookup').output.firstRow.date_comp}'",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
@@ -361,7 +367,7 @@
 											"storedProcedureParameters": {
 												"lastLoadDate": {
 													"value": {
-														"value": "select max(added_date) from @{item().targettable}",
+														"value": "@activity('listed tables recent date').output.firstRow.addDate",
 														"type": "Expression"
 													},
 													"type": "DateTime"
@@ -385,6 +391,38 @@
 										"linkedServiceName": {
 											"referenceName": "onpremServer",
 											"type": "LinkedServiceReference"
+										}
+									},
+									{
+										"name": "listed tables recent date",
+										"type": "Lookup",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SqlServerSource",
+												"sqlReaderQuery": "select max(added_date) as addDate from @{item().sourcetable}",
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"dataset": {
+												"referenceName": "DynamicSourceOnprem",
+												"type": "DatasetReference",
+												"parameters": {
+													"SrcSchema": {
+														"value": "@item().sourceSchema",
+														"type": "Expression"
+													},
+													"SrcTable": "@item().sourcetable"
+												}
+											}
 										}
 									}
 								]
