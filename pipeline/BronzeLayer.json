@@ -83,7 +83,7 @@
 											"sink": {
 												"type": "AzureSqlSink",
 												"preCopyScript": {
-													"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().tablename}')\n    TRUNCATE table @{item().tablename};",
+													"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().targettable}' and TABLE_SCHEMA = '@{item().targetschema}')\n    TRUNCATE table @{item().targettable};",
 													"type": "Expression"
 												},
 												"writeBehavior": "insert",
