@@ -130,7 +130,7 @@
 									},
 									{
 										"name": "Update last update for full load",
-										"type": "Lookup",
+										"type": "SqlServerStoredProcedure",
 										"dependsOn": [
 											{
 												"activity": "Full load Copy",
@@ -148,20 +148,25 @@
 										},
 										"userProperties": [],
 										"typeProperties": {
-											"source": {
-												"type": "SqlServerSource",
-												"sqlReaderQuery": {
-													"value": "update Deltalookup\nset LastLoadDate = getdate()\nwhere sourceSchema= '@{item().sourceSchema}' and sourceTable = '@{item().sourceTable}';\n\n\nselect getdate();\n",
-													"type": "Expression"
+											"storedProcedureName": "[dbo].[sp_updateLastLoadDate]",
+											"storedProcedureParameters": {
+												"lastLoadDate": {
+													"value": null,
+													"type": "DateTime"
 												},
-												"queryTimeout": "02:00:00",
-												"partitionOption": "None"
-											},
-											"dataset": {
-												"referenceName": "deltalookup",
-												"type": "DatasetReference"
-											},
-											"firstRowOnly": true
+												"TargetSchema": {
+													"value": "@item().targetschema",
+													"type": "String"
+												},
+												"TargetTable": {
+													"value": "@item().targetTable",
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "onpremServer",
+											"type": "LinkedServiceReference"
 										}
 									}
 								],
