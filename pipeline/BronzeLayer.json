@@ -194,7 +194,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date in lookup').output.date_comp}'",
+													"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date in lookup').output.value.date_comp}'",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
@@ -365,7 +365,7 @@
 										}
 									},
 									{
-										"name": "last load date in lookup",
+										"name": "splast load date in lookup",
 										"type": "SqlServerStoredProcedure",
 										"dependsOn": [],
 										"policy": {
@@ -379,9 +379,17 @@
 										"typeProperties": {
 											"storedProcedureName": "[dbo].[sp_lastLoadDateInLookup]",
 											"storedProcedureParameters": {
+												"addDate": {
+													"value": null,
+													"type": "DateTime"
+												},
+												"date_comp": {
+													"value": null,
+													"type": "DateTime"
+												},
 												"Sourceschema": {
 													"value": {
-														"value": "@item().sourceschema",
+														"value": "@item().sourceSchema",
 														"type": "Expression"
 													},
 													"type": "String"
@@ -398,6 +406,39 @@
 										"linkedServiceName": {
 											"referenceName": "onpremServer",
 											"type": "LinkedServiceReference"
+										}
+									},
+									{
+										"name": "last load date in lookup",
+										"type": "Lookup",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SqlServerSource",
+												"sqlReaderQuery": {
+													"value": "declare @date_comp datetime\nexec sp_lastLoadDateInLookup @item().sourceSchema,@item().sourceTable,@date_comp output\nselect @date_comp as date_comp",
+													"type": "Expression"
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"dataset": {
+												"referenceName": "DynamicSourceOnprem",
+												"type": "DatasetReference",
+												"parameters": {
+													"SrcSchema": "@item().sourceschema",
+													"SrcTable": "@item().sourcetable"
+												}
+											},
+											"firstRowOnly": true
 										}
 									}
 								]
