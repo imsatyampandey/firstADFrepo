@@ -200,10 +200,6 @@
 											},
 											"sink": {
 												"type": "AzureSqlSink",
-												"preCopyScript": {
-													"value": "truncate table @{item().Targettable}",
-													"type": "Expression"
-												},
 												"writeBehavior": "insert",
 												"sqlWriterUseTableLock": false,
 												"tableOption": "autoCreate",
@@ -212,10 +208,10 @@
 											"enableStaging": true,
 											"stagingSettings": {
 												"linkedServiceName": {
-													"referenceName": "AzureDataLakeStorage1",
+													"referenceName": "ADLS",
 													"type": "LinkedServiceReference"
 												},
-												"path": "stagingdeltaload"
+												"path": "newstagingfordelta"
 											},
 											"translator": {
 												"type": "TabularTranslator",
@@ -241,11 +237,17 @@
 										],
 										"outputs": [
 											{
-												"referenceName": "StageforDelta",
+												"referenceName": "DynamicTargetTableOnAzSql",
 												"type": "DatasetReference",
 												"parameters": {
-													"schema": "@item().targetSchema",
-													"Table": "@item().targetTable"
+													"TarSchema": {
+														"value": "@item().targetschema",
+														"type": "Expression"
+													},
+													"TarTable": {
+														"value": "@item().targettable",
+														"type": "Expression"
+													}
 												}
 											}
 										]
