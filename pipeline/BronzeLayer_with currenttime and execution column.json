@@ -1,0 +1,310 @@
+{
+	"name": "BronzeLayer_with currenttime and execution column",
+	"properties": {
+		"activities": [
+			{
+				"name": "Delta lookup table",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select * from deltalookup",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "deltatraget_table",
+						"type": "DatasetReference",
+						"parameters": {
+							"tartbl": "deltalookup"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach Table",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Delta lookup table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Delta lookup table').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Delta Flag validator",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(item().deltaflag,true)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Full load Copy",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SqlServerSource",
+												"sqlReaderQuery": {
+													"value": "select * from @{item().sourceTable}",
+													"type": "Expression"
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"sink": {
+												"type": "AzureSqlSink",
+												"preCopyScript": {
+													"value": "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '@{item().targettable}' and TABLE_SCHEMA = '@{item().targetschema}')\n    TRUNCATE table @{item().targettable};",
+													"type": "Expression"
+												},
+												"writeBehavior": "insert",
+												"sqlWriterUseTableLock": false,
+												"tableOption": "autoCreate",
+												"disableMetricsCollection": false
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "DynamicSourceOnprem",
+												"type": "DatasetReference",
+												"parameters": {
+													"SrcSchema": {
+														"value": "@item().sourceSchema",
+														"type": "Expression"
+													},
+													"SrcTable": {
+														"value": "@item().sourceTable",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "DynamicTargetTableOnAzSql",
+												"type": "DatasetReference",
+												"parameters": {
+													"TarSchema": "@item().TargetSchema",
+													"TarTable": "@item().TargetTable"
+												}
+											}
+										]
+									},
+									{
+										"name": "Update last update for full load",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Full load Copy",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[dbo].[sp_updateLoadDate]",
+											"storedProcedureParameters": {
+												"TargetSchema": {
+													"value": {
+														"value": "@item().targetschema",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"TargetTable": {
+													"value": {
+														"value": "@item().targettable",
+														"type": "Expression"
+													},
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "satyamDB2",
+											"type": "LinkedServiceReference"
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Copy data Source to Stage",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SqlServerSource",
+												"sqlReaderQuery": {
+													"value": "select * from @{item().sourceTable} where added_date > '@{item().lastloaddate}'",
+													"type": "Expression"
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"sink": {
+												"type": "AzureSqlSink",
+												"writeBehavior": "insert",
+												"sqlWriterUseTableLock": false,
+												"tableOption": "autoCreate",
+												"disableMetricsCollection": false
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "ADLS",
+													"type": "LinkedServiceReference"
+												},
+												"path": "newstagingfordelta"
+											},
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "DynamicSourceOnprem",
+												"type": "DatasetReference",
+												"parameters": {
+													"SrcSchema": {
+														"value": "@item().sourceSchema",
+														"type": "Expression"
+													},
+													"SrcTable": "@item().sourceTable"
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "DynamicTargetTableOnAzSql",
+												"type": "DatasetReference",
+												"parameters": {
+													"TarSchema": {
+														"value": "@item().targetschema",
+														"type": "Expression"
+													},
+													"TarTable": {
+														"value": "@item().targettable",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "update last load date",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Copy data Source to Stage",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[dbo].[sp_updateLoadDate]",
+											"storedProcedureParameters": {
+												"TargetSchema": {
+													"value": {
+														"value": "@item().targetschema",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"TargetTable": {
+													"value": {
+														"value": "@item().targettable",
+														"type": "Expression"
+													},
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "satyamDB2",
+											"type": "LinkedServiceReference"
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"folder": {
+			"name": "Ingest layer"
+		},
+		"annotations": []
+	}
+}
