@@ -16,14 +16,17 @@
 				"userProperties": [],
 				"typeProperties": {
 					"source": {
-						"type": "SqlServerSource",
+						"type": "AzureSqlSource",
 						"sqlReaderQuery": "select * from deltalookup",
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
 					"dataset": {
-						"referenceName": "deltalookup",
-						"type": "DatasetReference"
+						"referenceName": "deltatraget_table",
+						"type": "DatasetReference",
+						"parameters": {
+							"tartbl": "deltalookup"
+						}
 					},
 					"firstRowOnly": false
 				}
