@@ -76,6 +76,22 @@
 										"typeProperties": {
 											"source": {
 												"type": "SqlServerSource",
+												"additionalColumns": [
+													{
+														"name": "CurrentTimeStamp",
+														"value": {
+															"value": "@variables('CurrTime')",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "ExecutionTime",
+														"value": {
+															"value": "@pipeline().TriggerTime",
+															"type": "Expression"
+														}
+													}
+												],
 												"sqlReaderQuery": {
 													"value": "select * from @{item().sourceTable}",
 													"type": "Expression"
