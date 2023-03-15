@@ -5,6 +5,9 @@
 		"factoryName": {
 			"value": "SatyamSharedADF"
 		},
+		"ADLS_accountKey": {
+			"value": ""
+		},
 		"AzureBlobStorage1_connectionString": {
 			"value": ""
 		},
@@ -16,6 +19,9 @@
 		},
 		"satyamDB2_connectionString": {
 			"value": ""
+		},
+		"ADLS_properties_typeProperties_url": {
+			"value": "https://storagedemosatyam.dfs.core.windows.net/"
 		},
 		"AzureDataLakeStorage1_properties_typeProperties_url": {
 			"value": "https://storagedemosatyam.dfs.core.windows.net/"
