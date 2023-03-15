@@ -36,7 +36,7 @@
 				"type": "ForEach",
 				"dependsOn": [
 					{
-						"activity": "Delta lookup table",
+						"activity": "timestamp",
 						"dependencyConditions": [
 							"Succeeded"
 						]
@@ -215,6 +215,24 @@
 											},
 											"translator": {
 												"type": "TabularTranslator",
+												"mappings": [
+													{
+														"source": {
+															"name": "CurrentTimeStamp"
+														},
+														"sink": {
+															"name": "CurrentTimeStamp"
+														}
+													},
+													{
+														"source": {
+															"name": "ExecutionTime"
+														},
+														"sink": {
+															"name": "ExecutionTime"
+														}
+													}
+												],
 												"typeConversion": true,
 												"typeConversionSettings": {
 													"allowDataTruncation": true,
@@ -300,8 +318,33 @@
 						}
 					]
 				}
+			},
+			{
+				"name": "timestamp",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Delta lookup table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "CurrTime",
+					"value": {
+						"value": "@utcnow()",
+						"type": "Expression"
+					}
+				}
 			}
 		],
+		"variables": {
+			"CurrTime": {
+				"type": "String"
+			}
+		},
 		"folder": {
 			"name": "Ingest layer"
 		},
