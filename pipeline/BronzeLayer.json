@@ -148,24 +148,26 @@
 										},
 										"userProperties": [],
 										"typeProperties": {
-											"storedProcedureName": "[dbo].[sp_updateLastLoadDate]",
+											"storedProcedureName": "[dbo].[sp_updateLoadDate]",
 											"storedProcedureParameters": {
-												"lastLoadDate": {
-													"value": null,
-													"type": "DateTime"
-												},
 												"TargetSchema": {
-													"value": "@item().targetschema",
+													"value": {
+														"value": "@item().targetschema",
+														"type": "Expression"
+													},
 													"type": "String"
 												},
 												"TargetTable": {
-													"value": "@item().targetTable",
+													"value": {
+														"value": "@item().targettable",
+														"type": "Expression"
+													},
 													"type": "String"
 												}
 											}
 										},
 										"linkedServiceName": {
-											"referenceName": "onpremServer",
+											"referenceName": "satyamDB2",
 											"type": "LinkedServiceReference"
 										}
 									}
@@ -174,14 +176,7 @@
 									{
 										"name": "Copy data Source to Stage",
 										"type": "Copy",
-										"dependsOn": [
-											{
-												"activity": "last load date in lookup",
-												"dependencyConditions": [
-													"Succeeded"
-												]
-											}
-										],
+										"dependsOn": [],
 										"policy": {
 											"timeout": "0.12:00:00",
 											"retry": 0,
@@ -194,7 +189,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select * from @{item().sourceTable} where added_date > '@{activity('last load date in lookup').output.value.date_comp}'",
+													"value": "select * from @{item().sourceTable} where added_date > '@{item().lastloaddate}'",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
@@ -211,7 +206,14 @@
 												"tableOption": "autoCreate",
 												"disableMetricsCollection": false
 											},
-											"enableStaging": false,
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "AzureDataLakeStorage1",
+													"type": "LinkedServiceReference"
+												},
+												"path": "stagingdeltaload"
+											},
 											"translator": {
 												"type": "TabularTranslator",
 												"typeConversion": true,
@@ -246,8 +248,8 @@
 										]
 									},
 									{
-										"name": "Stage to Target",
-										"type": "Copy",
+										"name": "update last load date",
+										"type": "SqlServerStoredProcedure",
 										"dependsOn": [
 											{
 												"activity": "Copy data Source to Stage",
@@ -265,84 +267,8 @@
 										},
 										"userProperties": [],
 										"typeProperties": {
-											"source": {
-												"type": "AzureSqlSource",
-												"queryTimeout": "02:00:00",
-												"partitionOption": "None"
-											},
-											"sink": {
-												"type": "AzureSqlSink",
-												"writeBehavior": "insert",
-												"sqlWriterUseTableLock": false,
-												"tableOption": "autoCreate",
-												"disableMetricsCollection": false
-											},
-											"enableStaging": false,
-											"translator": {
-												"type": "TabularTranslator",
-												"typeConversion": true,
-												"typeConversionSettings": {
-													"allowDataTruncation": true,
-													"treatBooleanAsNumber": false
-												}
-											}
-										},
-										"inputs": [
-											{
-												"referenceName": "StageforDelta",
-												"type": "DatasetReference",
-												"parameters": {
-													"schema": {
-														"value": "@item().targetschema",
-														"type": "Expression"
-													},
-													"Table": {
-														"value": "@item().Targettable",
-														"type": "Expression"
-													}
-												}
-											}
-										],
-										"outputs": [
-											{
-												"referenceName": "DynamicTargetTableOnAzSql",
-												"type": "DatasetReference",
-												"parameters": {
-													"TarSchema": "@item().targetschema",
-													"TarTable": "@item().targetTable"
-												}
-											}
-										]
-									},
-									{
-										"name": "update last load date",
-										"type": "SqlServerStoredProcedure",
-										"dependsOn": [
-											{
-												"activity": "Stage to Target",
-												"dependencyConditions": [
-													"Succeeded"
-												]
-											}
-										],
-										"policy": {
-											"timeout": "0.12:00:00",
-											"retry": 0,
-											"retryIntervalInSeconds": 30,
-											"secureOutput": false,
-											"secureInput": false
-										},
-										"userProperties": [],
-										"typeProperties": {
-											"storedProcedureName": "[dbo].[sp_updateLastLoadDate]",
+											"storedProcedureName": "[dbo].[sp_updateLoadDate]",
 											"storedProcedureParameters": {
-												"lastLoadDate": {
-													"value": {
-														"value": "@activity('last load date in lookup').output.addDate",
-														"type": "Expression"
-													},
-													"type": "DateTime"
-												},
 												"TargetSchema": {
 													"value": {
 														"value": "@item().targetschema",
@@ -352,7 +278,7 @@
 												},
 												"TargetTable": {
 													"value": {
-														"value": "@item().Targettable",
+														"value": "@item().targettable",
 														"type": "Expression"
 													},
 													"type": "String"
@@ -360,85 +286,8 @@
 											}
 										},
 										"linkedServiceName": {
-											"referenceName": "onpremServer",
+											"referenceName": "satyamDB2",
 											"type": "LinkedServiceReference"
-										}
-									},
-									{
-										"name": "splast load date in lookup",
-										"type": "SqlServerStoredProcedure",
-										"dependsOn": [],
-										"policy": {
-											"timeout": "0.12:00:00",
-											"retry": 0,
-											"retryIntervalInSeconds": 30,
-											"secureOutput": false,
-											"secureInput": false
-										},
-										"userProperties": [],
-										"typeProperties": {
-											"storedProcedureName": "[dbo].[sp_lastLoadDateInLookup]",
-											"storedProcedureParameters": {
-												"addDate": {
-													"value": null,
-													"type": "DateTime"
-												},
-												"date_comp": {
-													"value": null,
-													"type": "DateTime"
-												},
-												"Sourceschema": {
-													"value": {
-														"value": "@item().sourceSchema",
-														"type": "Expression"
-													},
-													"type": "String"
-												},
-												"SourceTable": {
-													"value": {
-														"value": "@item().sourcetable",
-														"type": "Expression"
-													},
-													"type": "String"
-												}
-											}
-										},
-										"linkedServiceName": {
-											"referenceName": "onpremServer",
-											"type": "LinkedServiceReference"
-										}
-									},
-									{
-										"name": "last load date in lookup",
-										"type": "Lookup",
-										"dependsOn": [],
-										"policy": {
-											"timeout": "0.12:00:00",
-											"retry": 0,
-											"retryIntervalInSeconds": 30,
-											"secureOutput": false,
-											"secureInput": false
-										},
-										"userProperties": [],
-										"typeProperties": {
-											"source": {
-												"type": "SqlServerSource",
-												"sqlReaderQuery": {
-													"value": "declare @date_comp datetime\nexec sp_lastLoadDateInLookup @item().sourceSchema,@item().sourceTable,@date_comp output\nselect @date_comp as date_comp",
-													"type": "Expression"
-												},
-												"queryTimeout": "02:00:00",
-												"partitionOption": "None"
-											},
-											"dataset": {
-												"referenceName": "DynamicSourceOnprem",
-												"type": "DatasetReference",
-												"parameters": {
-													"SrcSchema": "@item().sourceschema",
-													"SrcTable": "@item().sourcetable"
-												}
-											},
-											"firstRowOnly": true
 										}
 									}
 								]
