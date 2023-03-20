@@ -62,6 +62,10 @@
 							"filename": {
 								"value": "@pipeline().parameters.filename",
 								"type": "Expression"
+							},
+							"folderstructure": {
+								"value": "@variables('vartbalname')",
+								"type": "Expression"
 							}
 						}
 					}
