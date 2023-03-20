@@ -8,6 +8,9 @@
 		"parameters": {
 			"filename": {
 				"type": "string"
+			},
+			"folderstructure": {
+				"type": "string"
 			}
 		},
 		"annotations": [],
@@ -19,8 +22,11 @@
 					"value": "@dataset().filename",
 					"type": "Expression"
 				},
-				"folderPath": "temp ",
-				"container": "imp"
+				"folderPath": {
+					"value": "@dataset().folderstructure",
+					"type": "Expression"
+				},
+				"container": "output"
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
