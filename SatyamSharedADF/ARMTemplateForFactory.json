@@ -2266,11 +2266,153 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "Copy data1",
-						"type": "Copy",
+						"name": "Set variable1",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "Var folder Structure",
+							"value": {
+								"value": "@concat(formatDateTime(utcNow(),'yyyy'),'/',formatDateTime(utcNow(),'MM'),'/',formatDateTime(utcNow(),'dd'),'/',formatDateTime(utcNow(),'hh:mm:ss'))\n",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Get Metadata1",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "CSV",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobStorageReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "ForEach1",
+						"type": "ForEach",
 						"dependsOn": [
 							{
 								"activity": "Set variable1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Get Metadata1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get Metadata1').output.childItems",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "Copy data1",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true,
+												"wildcardFileName": "*csv",
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobStorageWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "CSV",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "DelimitedText1",
+											"type": "DatasetReference",
+											"parameters": {
+												"folderstructure": {
+													"value": "@variables('Var folder Structure')",
+													"type": "Expression"
+												},
+												"filename": {
+													"value": "@concat(utcNow(),item().name)",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "pipeline log",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "ForEach1",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -2285,74 +2427,62 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
-							"source": {
-								"type": "DelimitedTextSource",
-								"storeSettings": {
-									"type": "AzureBlobStorageReadSettings",
-									"recursive": true,
-									"wildcardFileName": "*csv",
-									"enablePartitionDiscovery": false
+							"storedProcedureName": "[[dbo].[sp_logPipelineExecutionDetails]",
+							"storedProcedureParameters": {
+								"DataFactoryName": {
+									"value": {
+										"value": "@pipeline().DataFactory",
+										"type": "Expression"
+									},
+									"type": "String"
 								},
-								"formatSettings": {
-									"type": "DelimitedTextReadSettings"
-								}
-							},
-							"sink": {
-								"type": "DelimitedTextSink",
-								"storeSettings": {
-									"type": "AzureBlobStorageWriteSettings"
+								"execstatus": {
+									"value": {
+										"value": "@activity('Copy data1').output.executionDetails[0].status",
+										"type": "Expression"
+									},
+									"type": "String"
 								},
-								"formatSettings": {
-									"type": "DelimitedTextWriteSettings",
-									"quoteAllText": true,
-									"fileExtension": ".txt"
-								}
-							},
-							"enableStaging": false,
-							"translator": {
-								"type": "TabularTranslator",
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
+								"PipelineName": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineRunId": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineTriggerName": {
+									"value": {
+										"value": "@pipeline().TriggerType",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineTriggerTime": {
+									"value": {
+										"value": "@pipeline().TriggerName",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"totalfileRead": {
+									"value": {
+										"value": "@activity('Copy data1').output.filesWritten",
+										"type": "Expression"
+									},
+									"type": "Int32"
 								}
 							}
 						},
-						"inputs": [
-							{
-								"referenceName": "CSV",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "DelimitedText1",
-								"type": "DatasetReference",
-								"parameters": {
-									"filename": {
-										"value": "@concat(variables('Var folder Structure '),'.csv')",
-										"type": "Expression"
-									},
-									"folderstructure": {
-										"value": "@variables('Var folder Structure ')",
-										"type": "Expression"
-									}
-								}
-							}
-						]
-					},
-					{
-						"name": "Set variable1",
-						"type": "SetVariable",
-						"dependsOn": [],
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "Var folder Structure ",
-							"value": {
-								"value": "utcNow(yyyy)/utcNow(MM)/utcNow(dd)/utcNow(hh:mm:ss)",
-								"type": "Expression"
-							}
+						"linkedServiceName": {
+							"referenceName": "onpremServer",
+							"type": "LinkedServiceReference"
 						}
 					}
 				],
@@ -2361,7 +2491,7 @@
 					"cancelAfter": {}
 				},
 				"variables": {
-					"Var folder Structure ": {
+					"Var folder Structure": {
 						"type": "String"
 					}
 				},
@@ -2372,6 +2502,7 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/CSV')]",
+				"[concat(variables('factoryId'), '/linkedServices/onpremServer')]",
 				"[concat(variables('factoryId'), '/datasets/DelimitedText1')]"
 			]
 		},
@@ -2596,10 +2727,10 @@
 					"type": "LinkedServiceReference"
 				},
 				"parameters": {
-					"filename": {
+					"folderstructure": {
 						"type": "string"
 					},
-					"folderstructure": {
+					"filename": {
 						"type": "string"
 					}
 				},

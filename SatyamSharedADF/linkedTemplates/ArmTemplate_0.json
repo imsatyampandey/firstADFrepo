@@ -244,10 +244,10 @@
 					"type": "LinkedServiceReference"
 				},
 				"parameters": {
-					"filename": {
+					"folderstructure": {
 						"type": "string"
 					},
-					"folderstructure": {
+					"filename": {
 						"type": "string"
 					}
 				},
