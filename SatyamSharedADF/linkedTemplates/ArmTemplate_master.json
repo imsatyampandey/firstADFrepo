@@ -35,6 +35,10 @@
 			"type": "string",
 			"defaultValue": "https://storagedemosatyam.dfs.core.windows.net/"
 		},
+		"ls_RestService_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://reqres.in/api/users"
+		},
 		"SharedIRfromdemo_properties_typeProperties_linkedInfo_resourceId": {
 			"type": "string",
 			"defaultValue": "/subscriptions/dbda8b01-6aab-48c4-b253-2e1297b6cbe1/resourcegroups/satyamtesting/providers/Microsoft.DataFactory/factories/ADFsatyamdemo/integrationruntimes/satyamonprem"
@@ -86,6 +90,9 @@
 					},
 					"AzureDataLakeStorage1_properties_typeProperties_url": {
 						"value": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]"
+					},
+					"ls_RestService_properties_typeProperties_url": {
+						"value": "[parameters('ls_RestService_properties_typeProperties_url')]"
 					},
 					"SharedIRfromdemo_properties_typeProperties_linkedInfo_resourceId": {
 						"value": "[parameters('SharedIRfromdemo_properties_typeProperties_linkedInfo_resourceId')]"
