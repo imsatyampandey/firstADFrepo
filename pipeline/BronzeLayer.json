@@ -17,7 +17,7 @@
 				"typeProperties": {
 					"source": {
 						"type": "AzureSqlSource",
-						"sqlReaderQuery": "select * from deltalookup",
+						"sqlReaderQuery": "select * from lookup",
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
@@ -25,7 +25,7 @@
 						"referenceName": "deltatraget_table",
 						"type": "DatasetReference",
 						"parameters": {
-							"tartbl": "deltalookup"
+							"tartbl": "lookup"
 						}
 					},
 					"firstRowOnly": false
