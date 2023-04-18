@@ -311,7 +311,7 @@
 											"source": {
 												"type": "SqlServerSource",
 												"sqlReaderQuery": {
-													"value": "select * from satyam",
+													"value": "select * from @{item().sourceTable} where added_date > '@{item().lastloaddate}'",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
