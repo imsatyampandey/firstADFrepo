@@ -225,6 +225,125 @@
 													"referenceName": "satyamDB2",
 													"type": "LinkedServiceReference"
 												}
+											},
+											{
+												"name": "error log full load",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [
+													{
+														"activity": "Full load Copy",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[[dbo].[sp_logPipelineExecutionDetails]",
+													"storedProcedureParameters": {
+														"DataFactoryName": {
+															"value": {
+																"value": "@pipeline().DataFactory",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"execstatus": {
+															"value": {
+																"value": "@activity('Full load Copy').output.executionDetails[0].status ",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"failedfile": {
+															"value": {
+																"value": "@sub(activity('Full load Copy').output.dataWritten,activity('Full load Copy').output.dataRead)",
+																"type": "Expression"
+															},
+															"type": "Int32"
+														},
+														"PipelineName": {
+															"value": {
+																"value": "@pipeline().Pipeline",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"PipelineRunId": {
+															"value": {
+																"value": "@pipeline().RunId",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"PipelineTriggerName": {
+															"value": {
+																"value": "@pipeline().TriggerName",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"PipelineTriggerTime": {
+															"value": {
+																"value": "@pipeline().TriggerTime",
+																"type": "Expression"
+															},
+															"type": "DateTime"
+														},
+														"totalfileRead": {
+															"value": {
+																"value": "@activity('Full load Copy').output.filesread",
+																"type": "Expression"
+															},
+															"type": "Int32"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "satyamDB2",
+													"type": "LinkedServiceReference"
+												}
+											},
+											{
+												"name": "trigger mail for",
+												"type": "WebActivity",
+												"dependsOn": [
+													{
+														"activity": "Full load Copy",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"url": "https://prod-54.eastus.logic.azure.com:443/workflows/3d34f20a455b468c90d316a0c8700c82/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=83txJxGBkhoEx9imHBR2DnH2g_BSdxnRnN82XvF7dSA",
+													"method": "POST",
+													"headers": {
+														"Content-Type": {
+															"value": "application/json",
+															"type": "Expression"
+														}
+													},
+													"body": {
+														"value": "{\n\"Pipeline\": \"@{pipeline().Pipeline}\",\n\"ErrorMessage\": \"@{activity('Full load Copy').Error.Message}\",\n\"DataFactoryName\": \"@{pipeline().DataFactory}\",\n\"Runid\":\"@{pipeline().RunId}\"\n\n}",
+														"type": "Expression"
+													}
+												}
 											}
 										],
 										"ifTrueActivities": [
@@ -345,6 +464,125 @@
 												"linkedServiceName": {
 													"referenceName": "satyamDB2",
 													"type": "LinkedServiceReference"
+												}
+											},
+											{
+												"name": "error log",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [
+													{
+														"activity": "Copy data Source to Stage",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[[dbo].[sp_logPipelineExecutionDetails]",
+													"storedProcedureParameters": {
+														"DataFactoryName": {
+															"value": {
+																"value": "@pipeline().DataFactory",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"execstatus": {
+															"value": {
+																"value": "@activity('Copy data Source to Stage').output.executionDetails[0].status ",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"failedfile": {
+															"value": {
+																"value": "@sub(activity('Copy data Source to Stage').output.dataWritten,activity('Copy data Source to Stage').output.dataRead)",
+																"type": "Expression"
+															},
+															"type": "Int32"
+														},
+														"PipelineName": {
+															"value": {
+																"value": "@pipeline().Pipeline",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"PipelineRunId": {
+															"value": {
+																"value": "@pipeline().RunId",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"PipelineTriggerName": {
+															"value": {
+																"value": "@pipeline().TriggerName",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"PipelineTriggerTime": {
+															"value": {
+																"value": "@pipeline().TriggerTime",
+																"type": "Expression"
+															},
+															"type": "DateTime"
+														},
+														"totalfileRead": {
+															"value": {
+																"value": "@activity('Copy data Source to Stage').output.filesread",
+																"type": "Expression"
+															},
+															"type": "Int32"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "satyamDB2",
+													"type": "LinkedServiceReference"
+												}
+											},
+											{
+												"name": "trigger mail for deltaload",
+												"type": "WebActivity",
+												"dependsOn": [
+													{
+														"activity": "Copy data Source to Stage",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"url": "https://prod-54.eastus.logic.azure.com:443/workflows/3d34f20a455b468c90d316a0c8700c82/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=83txJxGBkhoEx9imHBR2DnH2g_BSdxnRnN82XvF7dSA",
+													"method": "POST",
+													"headers": {
+														"Content-Type": {
+															"value": "application/json",
+															"type": "Expression"
+														}
+													},
+													"body": {
+														"value": "{\n\"Pipeline\": \"@{pipeline().Pipeline}\",\n\"ErrorMessage\": \"@{activity('Copy data Source to Stage').Error.Message}\",\n\"DataFactoryName\": \"@{pipeline().DataFactory}\",\n\"Runid\":\"@{pipeline().RunId}\"\n\n}",
+														"type": "Expression"
+													}
 												}
 											}
 										]
