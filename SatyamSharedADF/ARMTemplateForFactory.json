@@ -69,7 +69,7 @@
 						"typeProperties": {
 							"source": {
 								"type": "AzureSqlSource",
-								"sqlReaderQuery": "select * from deltalookup",
+								"sqlReaderQuery": "select * from lookup",
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
@@ -77,7 +77,7 @@
 								"referenceName": "deltatraget_table",
 								"type": "DatasetReference",
 								"parameters": {
-									"tartbl": "deltalookup"
+									"tartbl": "lookup"
 								}
 							},
 							"firstRowOnly": false
@@ -2279,9 +2279,16 @@
 						}
 					},
 					{
-						"name": "Get Metadata1",
-						"type": "GetMetadata",
-						"dependsOn": [],
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set variable1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
 						"policy": {
 							"timeout": "0.12:00:00",
 							"retry": 0,
@@ -2291,128 +2298,69 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
-							"dataset": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"wildcardFileName": "*csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
 								"referenceName": "CSV",
 								"type": "DatasetReference",
 								"parameters": {}
-							},
-							"fieldList": [
-								"childItems"
-							],
-							"storeSettings": {
-								"type": "AzureBlobStorageReadSettings",
-								"recursive": true,
-								"enablePartitionDiscovery": false
-							},
-							"formatSettings": {
-								"type": "DelimitedTextReadSettings"
-							}
-						}
-					},
-					{
-						"name": "ForEach1",
-						"type": "ForEach",
-						"dependsOn": [
-							{
-								"activity": "Set variable1",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							},
-							{
-								"activity": "Get Metadata1",
-								"dependencyConditions": [
-									"Succeeded"
-								]
 							}
 						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@activity('Get Metadata1').output.childItems",
-								"type": "Expression"
-							},
-							"isSequential": true,
-							"activities": [
-								{
-									"name": "Copy data1",
-									"type": "Copy",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "0.12:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
+						"outputs": [
+							{
+								"referenceName": "DelimitedText1",
+								"type": "DatasetReference",
+								"parameters": {
+									"folderstructure": {
+										"value": "@variables('Var folder Structure')",
+										"type": "Expression"
 									},
-									"userProperties": [],
-									"typeProperties": {
-										"source": {
-											"type": "DelimitedTextSource",
-											"storeSettings": {
-												"type": "AzureBlobStorageReadSettings",
-												"recursive": true,
-												"wildcardFileName": "*csv",
-												"enablePartitionDiscovery": false
-											},
-											"formatSettings": {
-												"type": "DelimitedTextReadSettings"
-											}
-										},
-										"sink": {
-											"type": "DelimitedTextSink",
-											"storeSettings": {
-												"type": "AzureBlobStorageWriteSettings"
-											},
-											"formatSettings": {
-												"type": "DelimitedTextWriteSettings",
-												"quoteAllText": true,
-												"fileExtension": ".txt"
-											}
-										},
-										"enableStaging": false,
-										"translator": {
-											"type": "TabularTranslator",
-											"typeConversion": true,
-											"typeConversionSettings": {
-												"allowDataTruncation": true,
-												"treatBooleanAsNumber": false
-											}
-										}
-									},
-									"inputs": [
-										{
-											"referenceName": "CSV",
-											"type": "DatasetReference",
-											"parameters": {}
-										}
-									],
-									"outputs": [
-										{
-											"referenceName": "DelimitedText1",
-											"type": "DatasetReference",
-											"parameters": {
-												"folderstructure": {
-													"value": "@variables('Var folder Structure')",
-													"type": "Expression"
-												},
-												"filename": {
-													"value": "@concat(utcNow(),item().name)",
-													"type": "Expression"
-												}
-											}
-										}
-									]
+									"filename": {
+										"value": "@concat(formatDateTime(utcNow(),'yyyy'),'-',formatDateTime(utcNow(),'MM'),'-',formatDateTime(utcNow(),'dd'),'-',formatDateTime(utcNow(),'hh:mm:ss'))\n",
+										"type": "Expression"
+									}
 								}
-							]
-						}
+							}
+						]
 					},
 					{
-						"name": "pipeline log",
+						"name": "pipelinelog",
 						"type": "SqlServerStoredProcedure",
 						"dependsOn": [
 							{
-								"activity": "ForEach1",
+								"activity": "Copy data1",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -2438,10 +2386,17 @@
 								},
 								"execstatus": {
 									"value": {
-										"value": "@activity('Copy data1').output.executionDetails[0].status",
+										"value": "@activity('Copy data1').output.ExecutionDetails[0].status",
 										"type": "Expression"
 									},
 									"type": "String"
+								},
+								"failedfile": {
+									"value": {
+										"value": "@sub(activity('Copy data1').output.filesread,activity('Copy data1').output.fileswritten)",
+										"type": "Expression"
+									},
+									"type": "Int32"
 								},
 								"PipelineName": {
 									"value": {
@@ -2459,21 +2414,21 @@
 								},
 								"PipelineTriggerName": {
 									"value": {
-										"value": "@pipeline().TriggerType",
+										"value": "@pipeline().TriggerName",
 										"type": "Expression"
 									},
 									"type": "String"
 								},
 								"PipelineTriggerTime": {
 									"value": {
-										"value": "@pipeline().TriggerName",
+										"value": "@pipeline().TriggerTime",
 										"type": "Expression"
 									},
 									"type": "DateTime"
 								},
 								"totalfileRead": {
 									"value": {
-										"value": "@activity('Copy data1').output.filesWritten",
+										"value": "@activity('Copy data1').output.fileswritten",
 										"type": "Expression"
 									},
 									"type": "Int32"
@@ -2502,8 +2457,8 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/CSV')]",
-				"[concat(variables('factoryId'), '/linkedServices/onpremServer')]",
-				"[concat(variables('factoryId'), '/datasets/DelimitedText1')]"
+				"[concat(variables('factoryId'), '/datasets/DelimitedText1')]",
+				"[concat(variables('factoryId'), '/linkedServices/onpremServer')]"
 			]
 		},
 		{
