@@ -1,0 +1,20 @@
+{
+	"name": "SapTable1",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "SapTable",
+		"typeProperties": {
+			"clientId": "fsadf",
+			"sncMode": false,
+			"userName": "fasd",
+			"server": "fasdf",
+			"systemNumber": "fsdaf",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJiZTVjMzExMy01YzM2LTQ2MmMtOTlkNi1iODYwZDA5MDljNjQiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "SharedIRfromdemo",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
